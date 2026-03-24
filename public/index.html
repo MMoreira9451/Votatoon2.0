@@ -1,0 +1,2364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Votatoon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --sky-top: #66d8ff;
+      --sky-mid: #77dbdf;
+      --sky-bottom: #98f5c0;
+      --aero-green: #4dba2f;
+      --ink: #0f3d57;
+      --card-edge: rgba(255, 255, 255, 0.72);
+      --shadow-lg: 0 24px 60px rgba(0, 90, 140, 0.2);
+    }
+
+    /* ─── Frutiger Aero Reset & Base ──────────────────────────── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Fredoka', sans-serif;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.48) 0%, rgba(255,255,255,0.12) 16%, transparent 34%),
+        radial-gradient(circle at 80% 18%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.05) 18%, transparent 34%),
+        linear-gradient(180deg, #51bdf4 0%, var(--sky-top) 14%, #71ddd7 42%, var(--sky-bottom) 76%, #9bdd8a 100%);
+      background-attachment: fixed;
+      color: #1e293b;
+      overflow-x: hidden;
+    }
+
+    /* Floating bubbles background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(circle at 15% 25%, rgba(255,255,255,0.08) 0%, transparent 44%),
+        radial-gradient(circle at 85% 75%, rgba(255,255,255,0.06) 0%, transparent 36%),
+        radial-gradient(circle at 50% 10%, rgba(255,255,255,0.07) 0%, transparent 30%),
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.05) 0%, transparent 40%),
+        radial-gradient(circle at 70% 30%, rgba(255,255,255,0.06) 0%, transparent 26%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: -4vh;
+      height: 38vh;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(77,186,47,0.2) 42%, rgba(77,186,47,0.92) 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 360'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop stop-color='%23e8ffe1' stop-opacity='.9'/%3E%3Cstop offset='.76' stop-color='%2397df82' stop-opacity='.96'/%3E%3Cstop offset='1' stop-color='%234dba2f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g1)' d='M0 215c89-45 172-67 250-67 114 0 160 66 274 66 89 0 131-34 191-61 65-29 137-39 241-14 69 17 146 62 223 62 69 0 148-32 245-90v249H0z'/%3E%3Cpath fill='%234dba2f' fill-opacity='1' d='M0 252c55-23 93-34 145-34 81 0 120 44 199 44 77 0 102-21 162-48 48-22 109-30 173-16 61 13 113 46 176 46 54 0 97-18 145-44 65-35 128-44 200-26 80 20 118 62 200 62 57 0 120-19 200-62v186H0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      background-size: cover;
+      opacity: 1;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .skyline,
+    .aero-wave,
+    .floating-badge,
+    .bubble-cluster,
+    .seaweed,
+    .fish {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .skyline {
+      inset: auto 0 6vh 0;
+      height: 14vh;
+      background:
+        radial-gradient(circle at 10% 80%, rgba(130,230,112,0.9) 0 18%, transparent 20%),
+        radial-gradient(circle at 22% 72%, rgba(98,210,92,0.7) 0 14%, transparent 16%),
+        radial-gradient(circle at 70% 75%, rgba(176,248,159,0.8) 0 16%, transparent 18%),
+        radial-gradient(circle at 84% 82%, rgba(77,186,47,0.72) 0 13%, transparent 15%);
+      filter: blur(4px);
+      opacity: 1;
+    }
+
+    .aero-wave {
+      width: 40vw;
+      height: 40vw;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.28);
+      background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(255,255,255,0.01) 70%);
+      top: 8vh;
+      left: -12vw;
+      animation: waveDrift 16s ease-in-out infinite;
+      mix-blend-mode: screen;
+    }
+
+    .aero-wave.wave-2 {
+      width: 24vw;
+      height: 24vw;
+      top: 18vh;
+      left: auto;
+      right: -6vw;
+      animation-duration: 12s;
+      animation-direction: reverse;
+    }
+
+    .floating-badge {
+      top: 12vh;
+      right: 6vw;
+      padding: 10px 18px;
+      border-radius: 999px;
+      color: #f7feff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, rgba(76,190,232,0.72), rgba(112,228,203,0.52));
+      border: 1px solid rgba(255,255,255,0.45);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 24px rgba(49, 119, 150, 0.18);
+      animation: badgeFloat 10s ease-in-out infinite;
+    }
+
+    .bubble-cluster {
+      width: 180px;
+      height: 240px;
+      bottom: 12vh;
+      left: 4vw;
+      opacity: 0.96;
+    }
+
+    .bubble-cluster.right {
+      left: auto;
+      right: 5vw;
+      bottom: 18vh;
+      transform: scale(0.84);
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.7);
+      background: radial-gradient(circle at 30% 28%, rgba(255,255,255,0.95), rgba(181,243,255,0.25) 48%, rgba(255,255,255,0.08) 72%);
+      box-shadow: inset 0 10px 18px rgba(255,255,255,0.45), 0 8px 18px rgba(82, 171, 206, 0.16);
+      animation: bubbleRise 12s linear infinite;
+    }
+
+    .bubble.b1 { width: 22px; height: 22px; left: 8px; animation-delay: -1s; }
+    .bubble.b2 { width: 34px; height: 34px; left: 44px; animation-duration: 15s; animation-delay: -6s; }
+    .bubble.b3 { width: 18px; height: 18px; left: 90px; animation-duration: 11s; animation-delay: -3s; }
+    .bubble.b4 { width: 28px; height: 28px; left: 122px; animation-duration: 14s; animation-delay: -8s; }
+    .bubble.b5 { width: 14px; height: 14px; left: 62px; animation-duration: 10s; animation-delay: -5s; }
+    .bubble.b6 { width: 20px; height: 20px; left: 146px; animation-duration: 13s; animation-delay: -2s; }
+
+    .seaweed {
+      bottom: 4vh;
+      width: 120px;
+      height: 220px;
+      filter: drop-shadow(0 8px 24px rgba(34, 124, 90, 0.24));
+      opacity: 1;
+    }
+
+    .seaweed.left { left: 2vw; }
+    .seaweed.right { right: 2vw; transform: scaleX(-1); }
+
+    .seaweed span {
+      position: absolute;
+      bottom: 0;
+      width: 30px;
+      border-radius: 999px 999px 0 0;
+      transform-origin: bottom center;
+      background: linear-gradient(180deg, rgba(183,255,166,0.32), rgba(77,186,47,0.92));
+      border: 1px solid rgba(201,255,224,0.46);
+      animation: seaweedSway 7s ease-in-out infinite;
+    }
+
+    .seaweed span:nth-child(1) { left: 6px; height: 170px; animation-delay: -1s; }
+    .seaweed span:nth-child(2) { left: 34px; height: 210px; animation-duration: 8.5s; }
+    .seaweed span:nth-child(3) { left: 66px; height: 150px; animation-delay: -3s; }
+
+    .fish {
+      width: 92px;
+      height: 46px;
+      --fish-scale: 1;
+      animation: fishSwim 22s linear infinite;
+      opacity: 1;
+    }
+
+    .fish::before {
+      content: '';
+      position: absolute;
+      inset: 0 18px 0 0;
+      border-radius: 50px 36px 36px 50px;
+      background: linear-gradient(135deg, rgba(255,222,113,0.96), rgba(255,163,91,0.92));
+      box-shadow: inset 0 6px 12px rgba(255,255,255,0.35), 0 10px 24px rgba(242, 162, 79, 0.18);
+    }
+
+    .fish::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      right: 0;
+      width: 28px;
+      height: 28px;
+      clip-path: polygon(0 50%, 100% 0, 100% 100%);
+      background: linear-gradient(135deg, rgba(255,196,120,0.95), rgba(255,142,97,0.9));
+    }
+
+    .fish .eye {
+      position: absolute;
+      left: 18px;
+      top: 16px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #11455c;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.56);
+    }
+
+    .fish .fin {
+      position: absolute;
+      top: -6px;
+      left: 34px;
+      width: 22px;
+      height: 18px;
+      border-radius: 18px 18px 0 18px;
+      background: linear-gradient(180deg, rgba(255,245,178,0.9), rgba(255,187,96,0.8));
+      transform: rotate(-16deg);
+    }
+
+    .fish.fish-1 { top: 24vh; left: -120px; --fish-scale: 1.05; animation-duration: 24s; }
+    .fish.fish-2 { top: 56vh; left: -140px; --fish-scale: 0.82; animation-duration: 28s; animation-delay: -9s; }
+
+    /* ─── Glass Card ─────────────────────────────────────────── */
+    .glass {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.18)),
+        rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid var(--card-edge);
+      border-radius: 24px;
+      box-shadow:
+        var(--shadow-lg),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        inset 0 -12px 22px rgba(105, 235, 255, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .glass-strong {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.24)),
+        rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1.5px solid rgba(255, 255, 255, 0.7);
+      border-radius: 24px;
+      box-shadow:
+        0 28px 64px rgba(0, 112, 166, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -18px 28px rgba(77, 218, 255, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 24px 16px 84px;
+    }
+
+    .header {
+      text-align: center;
+      padding: 34px 28px 28px;
+      margin-bottom: 28px;
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.46), rgba(229,248,255,0.24)),
+        rgba(255,255,255,0.16);
+    }
+
+    .header h1 {
+      font-size: clamp(3rem, 6vw, 5rem);
+      font-weight: 700;
+      background: linear-gradient(180deg, #1b6588 0%, #1d7aa0 42%, #2aa1d3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      filter: drop-shadow(0 10px 20px rgba(255,255,255,0.35));
+      letter-spacing: -0.06em;
+    }
+
+    .header p {
+      color: #23566f;
+      font-size: 1.06rem;
+      margin-top: 12px;
+      font-weight: 500;
+      text-shadow: none;
+    }
+
+    .header-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.64), rgba(203,241,255,0.34));
+      border: 1px solid rgba(255,255,255,0.7);
+      color: #2983aa;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 12px 32px rgba(0, 92, 140, 0.14);
+    }
+
+    .header-badges {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .header-badge {
+      padding: 12px 16px;
+      min-width: 170px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.66), rgba(225,247,255,0.42));
+      border: 1px solid rgba(255,255,255,0.74);
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 600;
+      box-shadow: 0 12px 30px rgba(0, 110, 145, 0.12);
+    }
+
+    .header-badge strong {
+      display: block;
+      font-size: 0.78rem;
+      color: #0f6682;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+
+    /* ─── Screens ────────────────────────────────────────────── */
+    .screen { display: none !important; }
+    .screen.active { display: flex !important; }
+
+    /* ─── Login Screen ───────────────────────────────────────── */
+    #loginScreen {
+      justify-content: center;
+    }
+
+    #voterScreen.active,
+    #contestantScreen.active,
+    #presenterScreen.active {
+      display: block !important;
+    }
+
+    .login-card {
+      padding: 40px 36px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-card::before,
+    .presenter-panel::before,
+    .match-card::before,
+    .bracket-container::before,
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 38%);
+      pointer-events: none;
+    }
+
+    .login-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 22px 20px 18px;
+      margin-bottom: 24px;
+      border-radius: 22px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.38), rgba(191,245,255,0.18)),
+        linear-gradient(180deg, rgba(98,214,255,0.16), rgba(117,255,211,0.04));
+      border: 1px solid rgba(255,255,255,0.7);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+
+    .login-hero::after {
+      content: '';
+      position: absolute;
+      inset: auto -8% -36px;
+      height: 86px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.92), rgba(255,255,255,0.04) 65%);
+      filter: blur(12px);
+    }
+
+    .login-hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.6);
+      color: #0d718e;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .login-hero h3 {
+      font-size: 1.35rem;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .login-hero p {
+      margin-bottom: 0;
+      color: #2f657d;
+      font-size: 0.96rem;
+      line-height: 1.45;
+    }
+
+    .hero-bubbles {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .hero-bubble {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.82);
+      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), rgba(137,241,255,0.28) 50%, rgba(71,182,255,0.12) 100%);
+      box-shadow: inset 0 8px 14px rgba(255,255,255,0.65), 0 10px 18px rgba(38, 126, 153, 0.14);
+      animation: bubbleLift 9s ease-in-out infinite;
+    }
+
+    .hero-bubble:nth-child(2) { animation-delay: -2s; }
+    .hero-bubble:nth-child(3) { animation-delay: -4s; }
+
+    .login-card h2 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #0c4a6e;
+    }
+
+    .login-card p {
+      color: #475569;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+    }
+
+    .login-card label {
+      display: block;
+      text-align: left;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 0.95rem;
+    }
+
+    .login-card input,
+    .login-card select {
+      width: 100%;
+      padding: 14px 18px;
+      border: 1.5px solid rgba(14, 165, 233, 0.3);
+      border-radius: 16px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(8px);
+      color: #1e293b;
+      outline: none;
+      transition: all 0.3s ease;
+      margin-bottom: 16px;
+    }
+
+    .login-card input:focus,
+    .login-card select:focus {
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
+    }
+
+    .category-select { display: none; }
+
+    /* ─── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0) 54%);
+      pointer-events: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(14, 165, 233, 0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(244, 63, 94, 0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(244, 63, 94, 0.45);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .btn-warning:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-glass {
+      background: rgba(255,255,255,0.5);
+      color: #0c4a6e;
+      border: 1.5px solid rgba(14, 165, 233, 0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .btn-glass:hover {
+      background: rgba(255,255,255,0.7);
+      transform: translateY(-2px);
+    }
+
+    .btn-block { width: 100%; }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* ─── Role Selector ──────────────────────────────────────── */
+    .role-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .role-btn {
+      padding: 16px 12px;
+      border-radius: 18px;
+      border: 2px solid rgba(14, 165, 233, 0.2);
+      background: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    .role-btn:hover {
+      border-color: #0ea5e9;
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    .role-btn.selected {
+      border-color: #0ea5e9;
+      background: linear-gradient(135deg, rgba(14,165,233,0.15), rgba(6,182,212,0.15));
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    .role-btn .role-icon {
+      font-size: 2rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .role-btn .role-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #0c4a6e;
+    }
+
+    /* ─── Voting Screen ──────────────────────────────────────── */
+    .match-card {
+      padding: 32px 28px;
+      margin-bottom: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .match-title {
+      font-size: 1.1rem;
+      color: #0c4a6e;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .match-round {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+
+    .match-vs {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .contestant-card {
+      padding: 28px 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .contestant-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(130deg, rgba(255,255,255,0.28), transparent 42%, rgba(255,255,255,0.18) 76%, transparent);
+      transform: translateX(-120%);
+      transition: transform 0.8s ease;
+      pointer-events: none;
+    }
+
+    .contestant-card:hover {
+      border-color: #0ea5e9;
+      background: rgba(14, 165, 233, 0.08);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.2);
+    }
+
+    .contestant-card:hover::after {
+      transform: translateX(120%);
+    }
+
+    .contestant-card.selected {
+      border-color: #10b981;
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+    }
+
+    .contestant-card.voted {
+      border-color: #10b981;
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.15));
+    }
+
+    .contestant-card .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .avatar-a { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
+    .avatar-b { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+
+    .contestant-card .name {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #0c4a6e;
+      margin-bottom: 8px;
+    }
+
+    .contestant-card .vote-count {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #0ea5e9;
+    }
+
+    .contestant-card .vote-label {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .vs-badge {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #f59e0b;
+      text-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    /* ─── Vote Bar ───────────────────────────────────────────── */
+    .vote-bar-wrapper {
+      margin-top: 20px;
+      border-radius: 12px;
+      overflow: hidden;
+      height: 28px;
+      background: rgba(0,0,0,0.06);
+      display: flex;
+    }
+
+    .vote-bar-a {
+      height: 100%;
+      background: linear-gradient(90deg, #0ea5e9, #06b6d4);
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 0;
+    }
+
+    .vote-bar-b {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 0;
+    }
+
+    /* ─── Waiting Screen ─────────────────────────────────────── */
+    .waiting-card {
+      text-align: center;
+      padding: 60px 32px;
+    }
+
+    .waiting-card h2 {
+      font-size: 1.6rem;
+      color: #0c4a6e;
+      margin-bottom: 12px;
+    }
+
+    .waiting-card p {
+      color: #64748b;
+      font-size: 1.05rem;
+    }
+
+    .pulse-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #0ea5e9;
+      animation: pulse 1.5s infinite;
+      margin: 0 3px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .pulse-dot:nth-child(2) { animation-delay: 0.3s; }
+    .pulse-dot:nth-child(3) { animation-delay: 0.6s; }
+
+    /* ─── Presenter Panel ────────────────────────────────────── */
+    .presenter-panel {
+      padding: 28px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .presenter-panel h2 {
+      font-size: 1.5rem;
+      color: #0c4a6e;
+      margin-bottom: 20px;
+    }
+
+    .presenter-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .cat-tab {
+      padding: 10px 24px;
+      border-radius: 14px;
+      border: 2px solid rgba(14, 165, 233, 0.2);
+      background: rgba(255,255,255,0.4);
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #475569;
+    }
+
+    .cat-tab.active {
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+
+    .cat-tab:hover:not(.active) {
+      border-color: #0ea5e9;
+    }
+
+    /* Contestant list in presenter */
+    .contestant-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .contestant-item {
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.5);
+      border: 1.5px solid rgba(14,165,233,0.15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .contestant-item:hover {
+      border-color: #0ea5e9;
+      background: rgba(14, 165, 233, 0.08);
+    }
+
+    .contestant-item .mini-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .contestant-item .item-name {
+      font-weight: 600;
+      color: #0c4a6e;
+      font-size: 1rem;
+    }
+
+    .contestant-item .item-meta {
+      margin-left: auto;
+      font-weight: 700;
+      color: #0f6d8f;
+      font-size: 0.95rem;
+    }
+
+    .contestant-item.leading {
+      border-color: rgba(77, 186, 47, 0.45);
+      background: linear-gradient(135deg, rgba(211,255,200,0.85), rgba(255,255,255,0.52));
+      box-shadow: 0 0 0 3px rgba(77, 186, 47, 0.12);
+    }
+
+    .contestant-item.vote-option {
+      cursor: pointer;
+    }
+
+    .contestant-item.vote-option.voted {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: linear-gradient(135deg, rgba(194,255,231,0.9), rgba(255,255,255,0.55));
+    }
+
+    /* ─── Winner Overlay ─────────────────────────────────────── */
+    .winner-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .winner-overlay.active {
+      display: flex;
+    }
+
+    .winner-card {
+      padding: 48px 56px;
+      text-align: center;
+      animation: winnerPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 500px;
+    }
+
+    @keyframes winnerPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .winner-card .trophy {
+      font-size: 5rem;
+      margin-bottom: 16px;
+      animation: trophyBounce 2s infinite;
+    }
+
+    @keyframes trophyBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    .winner-card h2 {
+      font-size: 1.2rem;
+      color: #64748b;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .winner-card .winner-name {
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .winner-card .winner-category {
+      font-size: 1.1rem;
+      color: #0c4a6e;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    /* ─── Bracket View ───────────────────────────────────────── */
+    .bracket-container {
+      padding: 24px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .bracket-container h3 {
+      color: #0c4a6e;
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+
+    .bracket-rounds {
+      display: flex;
+      gap: 24px;
+      min-width: fit-content;
+    }
+
+    .bracket-round {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: center;
+      min-width: 180px;
+    }
+
+    .bracket-round-title {
+      text-align: center;
+      font-weight: 600;
+      color: #0c4a6e;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .bracket-match {
+      border-radius: 14px;
+      background: rgba(255,255,255,0.45);
+      border: 1.5px solid rgba(14,165,233,0.15);
+      overflow: hidden;
+    }
+
+    .bracket-match.current {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .bracket-player {
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(14,165,233,0.08);
+    }
+
+    .bracket-player:last-child { border-bottom: none; }
+
+    .bracket-player.winner {
+      background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(52,211,153,0.08));
+      font-weight: 600;
+    }
+
+    .bracket-player.loser {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .bracket-player .bp-name { color: #1e293b; }
+    .bracket-player .bp-votes {
+      color: #0ea5e9;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    /* ─── Status Bar ─────────────────────────────────────────── */
+    .status-bar {
+      padding: 12px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .status-dot.green { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+    .status-dot.red { background: #f43f5e; }
+    .status-dot.yellow { background: #f59e0b; animation: pulse 1.5s infinite; }
+
+    /* ─── Toast ───────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 24px;
+      border-radius: 16px;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 500;
+      color: white;
+      z-index: 999;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.4s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
+    .toast.error { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+    .toast.info { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
+
+    /* ─── Confetti ────────────────────────────────────────────── */
+    .confetti-piece {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      z-index: 1001;
+      pointer-events: none;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 820px) {
+      .container {
+        padding: 14px 12px 48px;
+      }
+
+      .header {
+        padding: 22px 16px 20px;
+        margin-bottom: 16px;
+      }
+
+      .header h1 {
+        font-size: clamp(2.3rem, 11vw, 3.4rem);
+      }
+
+      .header p {
+        font-size: 0.96rem;
+      }
+
+      .header-badges {
+        gap: 8px;
+      }
+
+      .header-badge {
+        min-width: calc(50% - 8px);
+        padding: 10px 12px;
+        font-size: 0.88rem;
+      }
+
+      .status-bar {
+        padding: 12px 14px;
+        gap: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .login-card,
+      .presenter-panel,
+      .match-card,
+      .bracket-container {
+        border-radius: 20px;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+
+      .glass {
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08)),
+          rgba(255,255,255,0.1);
+      }
+
+      .glass-strong,
+      .header {
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.12)),
+          rgba(255,255,255,0.12);
+      }
+
+      .login-card {
+        max-width: 100%;
+        padding: 24px 16px;
+      }
+
+      .login-hero {
+        padding: 16px 14px 14px;
+        margin-bottom: 18px;
+        background:
+          linear-gradient(135deg, rgba(255,255,255,0.26), rgba(191,245,255,0.1)),
+          linear-gradient(180deg, rgba(98,214,255,0.1), rgba(117,255,211,0.03));
+      }
+
+      .login-hero h3 {
+        font-size: 1.08rem;
+      }
+
+      .login-card h2 {
+        font-size: 1.55rem;
+      }
+
+      .role-buttons,
+      .contestant-list {
+        grid-template-columns: 1fr;
+      }
+
+      .presenter-controls {
+        flex-direction: column;
+      }
+
+      .presenter-controls .btn,
+      .category-tabs .cat-tab {
+        width: 100%;
+      }
+
+      .category-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .match-card {
+        padding: 20px 16px;
+      }
+
+      .match-vs {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .vs-badge {
+        display: none;
+      }
+
+      .contestant-card {
+        padding: 18px 12px;
+      }
+
+      .contestant-card .avatar {
+        width: 58px;
+        height: 58px;
+        font-size: 1.6rem;
+      }
+
+      .contestant-card .name {
+        font-size: 1.08rem;
+      }
+
+      .contestant-card .vote-count {
+        font-size: 1.6rem;
+      }
+
+      .contestant-item {
+        padding: 12px 14px;
+        gap: 10px;
+      }
+
+      .contestant-item .item-meta {
+        font-size: 0.88rem;
+      }
+
+      .bracket-rounds {
+        gap: 14px;
+      }
+
+      .bracket-round {
+        min-width: 150px;
+      }
+
+      .winner-card {
+        width: min(92vw, 460px);
+        padding: 30px 22px;
+      }
+
+      .winner-card .winner-name {
+        font-size: 2.1rem;
+      }
+
+      .toast {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        padding: 14px 16px;
+        font-size: 0.92rem;
+      }
+
+      .floating-badge,
+      .fish,
+      .seaweed.right,
+      .bubble-cluster.right {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .header-kicker {
+        width: 100%;
+        justify-content: center;
+        font-size: 0.74rem;
+        padding: 8px 10px;
+      }
+
+      .header-badge {
+        min-width: 100%;
+      }
+
+      .hero-bubbles {
+        gap: 6px;
+      }
+
+      .hero-bubble {
+        width: 30px;
+        height: 30px;
+      }
+
+      .login-card input,
+      .login-card select,
+      .btn {
+        padding-top: 13px;
+        padding-bottom: 13px;
+        font-size: 0.98rem;
+      }
+
+      .category-tabs {
+        grid-template-columns: 1fr;
+      }
+
+      .presenter-panel h2,
+      .waiting-card h2 {
+        font-size: 1.3rem;
+      }
+
+      .waiting-card {
+        padding: 34px 20px;
+      }
+
+      .contestant-item {
+        align-items: center;
+      }
+
+      .contestant-item .item-name {
+        font-size: 0.95rem;
+      }
+
+      .contestant-item .item-meta {
+        font-size: 0.8rem;
+      }
+
+      .mini-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.9rem;
+      }
+
+      .bubble-cluster,
+      .seaweed.left,
+      .orb-2,
+      .orb-3,
+      .aero-wave.wave-2 {
+        display: none;
+      }
+
+      .aero-wave {
+        width: 58vw;
+        height: 58vw;
+        top: 4vh;
+        left: -22vw;
+      }
+    }
+
+    /* ─── Animations ─────────────────────────────────────────── */
+    .fade-in {
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shimmer {
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* Floating decorative orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.15;
+    }
+
+    .orb-1 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, #fbbf24, transparent);
+      top: -100px; right: -80px;
+      animation: float1 8s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, #a78bfa, transparent);
+      bottom: -60px; left: -40px;
+      animation: float2 10s ease-in-out infinite;
+    }
+
+    .orb-3 {
+      width: 150px; height: 150px;
+      background: radial-gradient(circle, #34d399, transparent);
+      top: 40%; left: -50px;
+      animation: float3 12s ease-in-out infinite;
+    }
+
+    @keyframes float1 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(-30px, 40px); }
+    }
+
+    @keyframes float2 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(40px, -30px); }
+    }
+
+    @keyframes float3 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, -50px); }
+    }
+
+    @keyframes bubbleRise {
+      0% { transform: translate3d(0, 24px, 0) scale(0.8); opacity: 0; }
+      12% { opacity: 0.9; }
+      100% { transform: translate3d(24px, -220px, 0) scale(1.12); opacity: 0; }
+    }
+
+    @keyframes seaweedSway {
+      0%, 100% { transform: rotate(-4deg); }
+      50% { transform: rotate(7deg); }
+    }
+
+    @keyframes fishSwim {
+      0% { transform: translateX(0) translateY(0) scale(var(--fish-scale, 1)); }
+      25% { transform: translateX(35vw) translateY(8px) scale(var(--fish-scale, 1)); }
+      50% { transform: translateX(72vw) translateY(-10px) scale(var(--fish-scale, 1)); }
+      100% { transform: translateX(112vw) translateY(6px) scale(var(--fish-scale, 1)); }
+    }
+
+    @keyframes bubbleLift {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-10px) scale(1.04); }
+    }
+
+    @keyframes waveDrift {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(24px, -18px, 0) scale(1.06); }
+    }
+
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Decorative orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="aero-wave"></div>
+  <div class="aero-wave wave-2"></div>
+  <div class="skyline"></div>
+  <div class="bubble-cluster">
+    <div class="bubble b1"></div>
+    <div class="bubble b2"></div>
+    <div class="bubble b3"></div>
+    <div class="bubble b4"></div>
+    <div class="bubble b5"></div>
+    <div class="bubble b6"></div>
+  </div>
+  <div class="bubble-cluster right">
+    <div class="bubble b1"></div>
+    <div class="bubble b2"></div>
+    <div class="bubble b3"></div>
+    <div class="bubble b4"></div>
+    <div class="bubble b5"></div>
+    <div class="bubble b6"></div>
+  </div>
+  <div class="seaweed left">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="seaweed right">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="fish fish-1">
+    <span class="eye"></span>
+    <span class="fin"></span>
+  </div>
+  <div class="fish fish-2">
+    <span class="eye"></span>
+    <span class="fin"></span>
+  </div>
+  <div class="floating-badge">Live Tournament Experience</div>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header glass">
+      <h1>Votatoon</h1>
+      <p id="headerSubtitle">Elige tu rol y entra al show</p>
+    </div>
+
+    <!-- ═══ LOGIN SCREEN ═══ -->
+    <div id="loginScreen" class="screen active">
+      <div class="login-card glass-strong fade-in">
+        <div class="login-hero">
+          <div class="login-hero-label">Frutiger Aero Show</div>
+          <h3>Entradas brillantes, votación en vivo y final con confetti</h3>
+          <div class="hero-bubbles">
+            <div class="hero-bubble"></div>
+            <div class="hero-bubble"></div>
+            <div class="hero-bubble"></div>
+          </div>
+        </div>
+        <h2>Bienvenido</h2>
+        <p>Selecciona tu rol para ingresar</p>
+
+        <div class="role-buttons" id="roleButtons">
+          <div class="role-btn" data-role="voter" onclick="selectRole('voter')">
+            <span class="role-icon">🗳️</span>
+            <span class="role-label">Votante</span>
+          </div>
+          <div class="role-btn" data-role="contestant" onclick="selectRole('contestant')">
+            <span class="role-icon">⭐</span>
+            <span class="role-label">Concursante</span>
+          </div>
+          <div class="role-btn" data-role="presenter" onclick="selectRole('presenter')" id="presenterBtn" style="display:none;">
+            <span class="role-icon">🎤</span>
+            <span class="role-label">Presentador</span>
+          </div>
+        </div>
+
+        <label for="nameInput">Tu nombre</label>
+        <input type="text" id="nameInput" placeholder="Escribe tu nombre..." maxlength="30" />
+
+        <div class="category-select" id="categorySelect">
+          <label for="categoryInput">Categoría</label>
+          <select id="categoryInput">
+            <option value="vestimenta">👗 Vestimenta</option>
+            <option value="presentacion">🎭 Presentación</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="doRegister()">Entrar</button>
+      </div>
+    </div>
+
+    <!-- ═══ VOTER SCREEN ═══ -->
+    <div id="voterScreen" class="screen">
+      <div class="status-bar glass" id="voterStatus">
+        <div>
+          <span class="status-dot yellow"></span>
+          <span id="voterStatusText">Esperando al presentador...</span>
+        </div>
+        <div id="voterCategory" style="font-weight:600;color:#0c4a6e;text-transform:capitalize;"></div>
+      </div>
+
+      <!-- Waiting state -->
+      <div id="voterWaiting" class="waiting-card glass fade-in">
+        <h2>Esperando</h2>
+        <p>El presentador aún no ha habilitado la votación</p>
+        <div style="margin-top:20px;">
+          <span class="pulse-dot"></span>
+          <span class="pulse-dot"></span>
+          <span class="pulse-dot"></span>
+        </div>
+      </div>
+
+      <!-- Voting state -->
+      <div id="voterVoting" style="display:none;">
+        <div class="match-card glass fade-in">
+          <div class="match-title" id="vMatchTitle">Ronda 1 - Enfrentamiento 1</div>
+          <div class="match-round" id="vMatchCategory">Categoría: Vestimenta</div>
+
+          <div id="vDuelView">
+            <div class="match-vs">
+              <div class="contestant-card" id="vContA" onclick="castVote('a')">
+                <div class="avatar avatar-a" id="vAvatarA">A</div>
+                <div class="name" id="vNameA">-</div>
+                <div class="vote-count" id="vVotesA">0</div>
+                <div class="vote-label">votos</div>
+              </div>
+              <div class="vs-badge">VS</div>
+              <div class="contestant-card" id="vContB" onclick="castVote('b')">
+                <div class="avatar avatar-b" id="vAvatarB">B</div>
+                <div class="name" id="vNameB">-</div>
+                <div class="vote-count" id="vVotesB">0</div>
+                <div class="vote-label">votos</div>
+              </div>
+            </div>
+
+            <div class="vote-bar-wrapper" id="vVoteBar">
+              <div class="vote-bar-a" id="vBarA" style="width:50%"></div>
+              <div class="vote-bar-b" id="vBarB" style="width:50%"></div>
+            </div>
+          </div>
+
+          <div id="vPresentationView" style="display:none;">
+            <div class="contestant-list" id="vPresentationList"></div>
+          </div>
+
+          <div style="margin-top:16px;color:#64748b;font-size:0.9rem;" id="vVoteStatus"></div>
+        </div>
+      </div>
+
+      <!-- Bracket view for voter -->
+      <div class="bracket-container glass" id="voterBracket" style="display:none;">
+        <h3 id="voterBracketTitle">Bracket</h3>
+        <div class="bracket-rounds" id="voterBracketRounds"></div>
+      </div>
+    </div>
+
+    <!-- ═══ CONTESTANT SCREEN ═══ -->
+    <div id="contestantScreen" class="screen">
+      <div class="status-bar glass" id="contestantStatus">
+        <div>
+          <span class="status-dot green"></span>
+          <span id="contestantStatusText">Inscrito como concursante</span>
+        </div>
+        <div id="contestantCategory" style="font-weight:600;color:#0c4a6e;text-transform:capitalize;"></div>
+      </div>
+
+      <div class="match-card glass fade-in" id="contestantView">
+        <h2 style="color:#0c4a6e;margin-bottom:8px;">Tu categoría</h2>
+        <p style="color:#64748b;margin-bottom:24px;" id="contestantCatLabel">-</p>
+
+        <div id="contestantMatchInfo" style="display:none;">
+          <div class="match-title" id="cMatchTitle">Enfrentamiento actual</div>
+          <div id="cDuelView">
+            <div class="match-vs" style="margin-top:16px;">
+              <div class="contestant-card" id="cContA" style="cursor:default;">
+                <div class="avatar avatar-a" id="cAvatarA">A</div>
+                <div class="name" id="cNameA">-</div>
+                <div class="vote-count" id="cVotesA">0</div>
+                <div class="vote-label">votos</div>
+              </div>
+              <div class="vs-badge">VS</div>
+              <div class="contestant-card" id="cContB" style="cursor:default;">
+                <div class="avatar avatar-b" id="cAvatarB">B</div>
+                <div class="name" id="cNameB">-</div>
+                <div class="vote-count" id="cVotesB">0</div>
+                <div class="vote-label">votos</div>
+              </div>
+            </div>
+            <div class="vote-bar-wrapper">
+              <div class="vote-bar-a" id="cBarA" style="width:50%"></div>
+              <div class="vote-bar-b" id="cBarB" style="width:50%"></div>
+            </div>
+          </div>
+
+          <div id="cPresentationView" style="display:none; margin-top:16px;">
+            <div class="contestant-list" id="cPresentationList"></div>
+          </div>
+        </div>
+
+        <div id="contestantWaiting" style="margin-top:20px;">
+          <p style="color:#64748b;">Esperando que comience el torneo...</p>
+          <div style="margin-top:12px;">
+            <span class="pulse-dot"></span>
+            <span class="pulse-dot"></span>
+            <span class="pulse-dot"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bracket view for contestant -->
+      <div class="bracket-container glass" id="contestantBracket" style="display:none;">
+        <h3 id="contestantBracketTitle">Bracket</h3>
+        <div class="bracket-rounds" id="contestantBracketRounds"></div>
+      </div>
+    </div>
+
+    <!-- ═══ PRESENTER SCREEN ═══ -->
+    <div id="presenterScreen" class="screen">
+      <div class="status-bar glass">
+        <div>
+          <span class="status-dot green"></span>
+          <span>Panel del Presentador</span>
+        </div>
+        <div style="font-weight:600;color:#0c4a6e;" id="presenterCurrentCat">Vestimenta</div>
+      </div>
+
+      <div class="presenter-panel glass-strong fade-in">
+        <h2>Controles</h2>
+
+        <div class="category-tabs">
+          <button class="cat-tab active" data-cat="vestimenta" onclick="switchCat('vestimenta')">👗 Vestimenta</button>
+          <button class="cat-tab" data-cat="presentacion" onclick="switchCat('presentacion')">🎭 Presentación</button>
+        </div>
+
+        <div class="presenter-controls">
+          <button class="btn btn-primary" id="btnToggleReg" onclick="toggleRegistration()">Cerrar inscripciones</button>
+          <button class="btn btn-success" id="btnStartTournament" onclick="startTournament()">Iniciar torneo</button>
+          <button class="btn btn-warning" id="btnToggleVote" onclick="toggleVoting()" disabled>Abrir votación</button>
+          <button class="btn btn-danger" id="btnReset" onclick="resetAll()">Reiniciar todo</button>
+        </div>
+
+        <!-- Current match display -->
+        <div id="presenterMatch" style="display:none;">
+          <div class="match-card" style="padding:20px; background:rgba(255,255,255,0.3); border-radius:18px;">
+            <div class="match-title" id="pMatchTitle">Enfrentamiento actual</div>
+            <div id="pDuelView">
+              <div class="match-vs" style="margin-top:12px;">
+                <div class="contestant-card" id="pContA" style="cursor:default;">
+                  <div class="avatar avatar-a" id="pAvatarA">A</div>
+                  <div class="name" id="pNameA">-</div>
+                  <div class="vote-count" id="pVotesA">0</div>
+                  <div class="vote-label">votos</div>
+                </div>
+                <div class="vs-badge">VS</div>
+                <div class="contestant-card" id="pContB" style="cursor:default;">
+                  <div class="avatar avatar-b" id="pAvatarB">B</div>
+                  <div class="name" id="pNameB">-</div>
+                  <div class="vote-count" id="pVotesB">0</div>
+                  <div class="vote-label">votos</div>
+                </div>
+              </div>
+
+              <div class="vote-bar-wrapper">
+                <div class="vote-bar-a" id="pBarA" style="width:50%"></div>
+                <div class="vote-bar-b" id="pBarB" style="width:50%"></div>
+              </div>
+            </div>
+
+            <div id="pPresentationView" style="display:none; margin-top:12px;">
+              <div class="contestant-list" id="pPresentationList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contestants list -->
+        <h3 style="color:#0c4a6e;margin-top:24px;margin-bottom:4px;">Concursantes inscritos</h3>
+        <p style="color:#64748b;font-size:0.85rem;margin-bottom:12px;">Click en un concursante para anunciarlo como ganador</p>
+        <div class="contestant-list" id="presenterContestants"></div>
+      </div>
+
+      <!-- Bracket view for presenter -->
+      <div class="bracket-container glass" id="presenterBracket">
+        <h3 id="presenterBracketTitle">Bracket</h3>
+        <div class="bracket-rounds" id="presenterBracketRounds"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Winner Overlay -->
+  <div class="winner-overlay" id="winnerOverlay">
+    <div class="winner-card glass-strong">
+      <div class="trophy">🏆</div>
+      <h2>El ganador es...</h2>
+      <div class="winner-name" id="winnerName">-</div>
+      <div class="winner-category" id="winnerCategoryLabel">-</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ─── Socket & State ──────────────────────────────────────
+    const socket = io();
+    let myRole = null;
+    let myName = null;
+    let myCategory = null;
+    let currentState = null;
+    let hasVoted = false;
+    let selectedContestantId = null;
+    let pendingRegistration = false;
+    const adminParam = new URLSearchParams(window.location.search).get('admin');
+    const isAdmin = adminParam === 'votatoon2026';
+    if (isAdmin) {
+      document.getElementById('presenterBtn').style.display = '';
+      document.getElementById('roleButtons').style.gridTemplateColumns = '1fr 1fr 1fr';
+    } else {
+      document.getElementById('roleButtons').style.gridTemplateColumns = '1fr 1fr';
+    }
+
+    // ─── Login ───────────────────────────────────────────────
+    function selectRole(role) {
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+      document.querySelector(`.role-btn[data-role="${role}"]`).classList.add('selected');
+      myRole = role;
+      document.getElementById('categorySelect').style.display = role === 'contestant' ? 'block' : 'none';
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function doRegister() {
+      const name = document.getElementById('nameInput').value.trim();
+      if (!myRole) return showToast('Selecciona un rol', 'error');
+      if (!name) return showToast('Escribe tu nombre', 'error');
+      if (pendingRegistration) return;
+
+      myName = name;
+      myCategory = myRole === 'contestant' ? document.getElementById('categoryInput').value : null;
+      pendingRegistration = true;
+
+      const registerData = { role: myRole, name: myName, category: myCategory };
+      if (myRole === 'presenter') registerData.adminKey = adminParam;
+      socket.emit('register', registerData);
+    }
+
+    socket.on('registered', ({ role, name }) => {
+      pendingRegistration = false;
+      myRole = role;
+      myName = name;
+
+      if (myRole === 'voter') {
+        showScreen('voterScreen');
+        document.getElementById('headerSubtitle').textContent = `Votante: ${myName}`;
+      } else if (myRole === 'contestant') {
+        showScreen('contestantScreen');
+        document.getElementById('headerSubtitle').textContent = `Concursante: ${myName}`;
+        document.getElementById('contestantCatLabel').textContent = myCategory === 'vestimenta' ? '👗 Vestimenta' : '🎭 Presentación';
+        document.getElementById('contestantCategory').textContent = myCategory;
+      } else {
+        showScreen('presenterScreen');
+        document.getElementById('headerSubtitle').textContent = 'Panel del Presentador';
+      }
+    });
+
+    socket.on('registerError', (msg) => {
+      pendingRegistration = false;
+      showScreen('loginScreen');
+      showToast(msg, 'error');
+    });
+
+    // ─── State Update ────────────────────────────────────────
+    socket.on('state', (s) => {
+      currentState = s;
+      updateUI();
+    });
+
+    function updateUI() {
+      const s = currentState;
+      if (!s) return;
+
+      if (myRole === 'voter') updateVoterUI(s);
+      else if (myRole === 'contestant') updateContestantUI(s);
+      else if (myRole === 'presenter') updatePresenterUI(s);
+
+      // Winner overlay
+      if (s.announcedWinner) {
+        document.getElementById('winnerName').textContent = s.announcedWinner.name;
+        document.getElementById('winnerCategoryLabel').textContent = s.announcedWinner.category === 'vestimenta' ? '👗 Vestimenta' : '🎭 Presentación';
+        document.getElementById('winnerOverlay').classList.add('active');
+        launchConfetti();
+      } else {
+        document.getElementById('winnerOverlay').classList.remove('active');
+      }
+    }
+
+    function isPopularCategory(category) {
+      return currentState?.categoryModes?.[category] === 'popular';
+    }
+
+    function getCategoryLabel(category) {
+      return category === 'vestimenta' ? '👗 Vestimenta' : '🎭 Presentación';
+    }
+
+    function renderPopularList(containerId, leaderboard, options = {}) {
+      const {
+        clickable = false,
+        selectedId = null,
+        clickHandler = 'castVote',
+        announceCategory = null,
+      } = options;
+
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      container.innerHTML = leaderboard.map((contestant, index) => {
+        const classes = ['contestant-item'];
+        if (clickable) classes.push('vote-option');
+        if (selectedId === contestant.id) classes.push('voted');
+        if (index === 0 && contestant.votes > 0) classes.push('leading');
+
+        const clickAttr = clickable
+          ? `onclick="${clickHandler}('${contestant.id}')"`
+          : announceCategory
+            ? `onclick="announceWinner('${contestant.id}', '${announceCategory}')"`
+            : '';
+
+        return `
+          <div class="${classes.join(' ')}" ${clickAttr}>
+            <div class="mini-avatar">${contestant.name.charAt(0).toUpperCase()}</div>
+            <div class="item-name">${contestant.name}</div>
+            <div class="item-meta">${contestant.votes} voto${contestant.votes === 1 ? '' : 's'}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ─── Voter UI ────────────────────────────────────────────
+    function updateVoterUI(s) {
+      const category = s.currentCategory;
+      const popular = isPopularCategory(category);
+      const match = s.currentMatchData;
+      document.getElementById('voterCategory').textContent = category;
+
+      if (!s.votingOpen || (popular ? s.categoryLeaderboard.length === 0 : !match)) {
+        document.getElementById('voterWaiting').style.display = '';
+        document.getElementById('voterVoting').style.display = 'none';
+        document.getElementById('voterStatusText').textContent = 'Esperando al presentador...';
+        document.querySelector('#voterStatus .status-dot').className = 'status-dot yellow';
+      } else {
+        document.getElementById('voterWaiting').style.display = 'none';
+        document.getElementById('voterVoting').style.display = '';
+        document.getElementById('voterStatusText').textContent = 'Votación abierta';
+        document.querySelector('#voterStatus .status-dot').className = 'status-dot green';
+
+        document.getElementById('vMatchCategory').textContent = getCategoryLabel(category);
+
+        if (popular) {
+          document.getElementById('vDuelView').style.display = 'none';
+          document.getElementById('vPresentationView').style.display = '';
+          document.getElementById('vMatchTitle').textContent = 'Votación general';
+          renderPopularList('vPresentationList', s.categoryLeaderboard, {
+            clickable: !hasVoted,
+            selectedId: selectedContestantId,
+          });
+          document.getElementById('vVoteStatus').textContent = hasVoted
+            ? 'Ya registraste tu voto en Presentación'
+            : 'Toca un concursante para votar';
+        } else {
+          document.getElementById('vDuelView').style.display = '';
+          document.getElementById('vPresentationView').style.display = 'none';
+          const roundIdx = s.currentRound[category];
+          const matchIdx = s.currentMatch[category];
+          document.getElementById('vMatchTitle').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1}`;
+
+          document.getElementById('vNameA').textContent = match.a.name;
+          document.getElementById('vNameB').textContent = match.b.name;
+          document.getElementById('vAvatarA').textContent = match.a.name.charAt(0).toUpperCase();
+          document.getElementById('vAvatarB').textContent = match.b.name.charAt(0).toUpperCase();
+
+          const votesA = match.votes[match.a.id] || 0;
+          const votesB = match.votes[match.b.id] || 0;
+          document.getElementById('vVotesA').textContent = votesA;
+          document.getElementById('vVotesB').textContent = votesB;
+
+          updateVoteBar('v', votesA, votesB);
+
+          if (hasVoted) {
+            document.getElementById('vVoteStatus').textContent = 'Ya votaste en esta ronda';
+            document.getElementById('vContA').style.pointerEvents = 'none';
+            document.getElementById('vContB').style.pointerEvents = 'none';
+          } else {
+            document.getElementById('vVoteStatus').textContent = 'Toca un concursante para votar';
+            document.getElementById('vContA').style.pointerEvents = '';
+            document.getElementById('vContB').style.pointerEvents = '';
+          }
+        }
+      }
+
+      updateBracketView(s, 'voterBracketRounds', 'voterBracket', 'voterBracketTitle');
+    }
+
+    // ─── Contestant UI ───────────────────────────────────────
+    function updateContestantUI(s) {
+      const category = s.currentCategory;
+      const popular = isPopularCategory(category);
+      document.getElementById('contestantCategory').textContent = category;
+      const match = s.currentMatchData;
+
+      if ((popular && s.categoryLeaderboard.length > 0 && (s.votingOpen || s.categoryCompleted[category])) || (match && s.votingOpen)) {
+        document.getElementById('contestantMatchInfo').style.display = '';
+        document.getElementById('contestantWaiting').style.display = 'none';
+
+        if (popular) {
+          document.getElementById('cDuelView').style.display = 'none';
+          document.getElementById('cPresentationView').style.display = '';
+          document.getElementById('cMatchTitle').textContent = s.votingOpen
+            ? 'Votación general en curso'
+            : 'Resultado final de Presentación';
+          renderPopularList('cPresentationList', s.categoryLeaderboard);
+          document.getElementById('contestantStatusText').textContent = s.votingOpen ? 'Votación en curso' : 'Presentación finalizada';
+          document.querySelector('#contestantStatus .status-dot').className = s.votingOpen ? 'status-dot yellow' : 'status-dot green';
+        } else {
+          document.getElementById('cDuelView').style.display = '';
+          document.getElementById('cPresentationView').style.display = 'none';
+          const roundIdx = s.currentRound[category];
+          const matchIdx = s.currentMatch[category];
+          document.getElementById('cMatchTitle').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1} (${category})`;
+
+          document.getElementById('cNameA').textContent = match.a.name;
+          document.getElementById('cNameB').textContent = match.b.name;
+          document.getElementById('cAvatarA').textContent = match.a.name.charAt(0).toUpperCase();
+          document.getElementById('cAvatarB').textContent = match.b.name.charAt(0).toUpperCase();
+
+          const votesA = match.votes[match.a.id] || 0;
+          const votesB = match.votes[match.b.id] || 0;
+          document.getElementById('cVotesA').textContent = votesA;
+          document.getElementById('cVotesB').textContent = votesB;
+
+          updateVoteBar('c', votesA, votesB);
+
+          document.getElementById('contestantStatusText').textContent = 'Votación en curso';
+          document.querySelector('#contestantStatus .status-dot').className = 'status-dot yellow';
+        }
+      } else {
+        document.getElementById('contestantMatchInfo').style.display = 'none';
+        document.getElementById('contestantWaiting').style.display = '';
+        document.getElementById('contestantStatusText').textContent = popular ? 'Esperando la votación general' : 'Inscrito como concursante';
+        document.querySelector('#contestantStatus .status-dot').className = 'status-dot green';
+      }
+
+      updateBracketView(s, 'contestantBracketRounds', 'contestantBracket', 'contestantBracketTitle');
+    }
+
+    // ─── Presenter UI ────────────────────────────────────────
+    function updatePresenterUI(s) {
+      const category = s.currentCategory;
+      const popular = isPopularCategory(category);
+      document.getElementById('presenterCurrentCat').textContent = getCategoryLabel(category);
+
+      // Category tabs
+      document.querySelectorAll('.cat-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.cat === s.currentCategory);
+      });
+
+      // Registration button
+      const regBtn = document.getElementById('btnToggleReg');
+      regBtn.textContent = s.registrationOpen ? 'Cerrar inscripciones' : 'Abrir inscripciones';
+      document.getElementById('btnStartTournament').textContent = popular ? 'Preparar votación' : 'Iniciar torneo';
+
+      // Voting button
+      const voteBtn = document.getElementById('btnToggleVote');
+      const match = s.currentMatchData;
+      if (popular) {
+        voteBtn.disabled = false;
+        if (s.votingOpen) {
+          voteBtn.textContent = 'Cerrar votación';
+          voteBtn.className = 'btn btn-danger';
+        } else if (s.categoryCompleted[category]) {
+          voteBtn.disabled = true;
+          voteBtn.textContent = 'Votación finalizada';
+          voteBtn.className = 'btn btn-warning';
+        } else {
+          voteBtn.textContent = 'Abrir votación';
+          voteBtn.className = 'btn btn-warning';
+        }
+        if ((s.contestants[category] || []).length === 0) {
+          voteBtn.disabled = true;
+          voteBtn.textContent = 'Sin concursantes';
+        }
+      } else if (match && !match.winner) {
+        voteBtn.disabled = false;
+        if (s.votingOpen) {
+          voteBtn.textContent = 'Cerrar votación';
+          voteBtn.className = 'btn btn-danger';
+        } else {
+          voteBtn.textContent = 'Abrir votación';
+          voteBtn.className = 'btn btn-warning';
+        }
+      } else {
+        voteBtn.disabled = true;
+        voteBtn.textContent = 'Abrir votación';
+        voteBtn.className = 'btn btn-warning';
+      }
+
+      // Check if there's a category winner
+      if (s.categoryWinner) {
+        voteBtn.disabled = true;
+        voteBtn.textContent = 'Categoría finalizada';
+      }
+
+      // Match display
+      if (popular && s.categoryLeaderboard.length > 0) {
+        document.getElementById('presenterMatch').style.display = '';
+        document.getElementById('pMatchTitle').textContent = s.votingOpen ? 'Ranking en vivo' : 'Resultado de Presentación';
+        document.getElementById('pDuelView').style.display = 'none';
+        document.getElementById('pPresentationView').style.display = '';
+        renderPopularList('pPresentationList', s.categoryLeaderboard);
+      } else if (match) {
+        document.getElementById('presenterMatch').style.display = '';
+        document.getElementById('pDuelView').style.display = '';
+        document.getElementById('pPresentationView').style.display = 'none';
+        const roundIdx = s.currentRound[s.currentCategory];
+        const matchIdx = s.currentMatch[s.currentCategory];
+        document.getElementById('pMatchTitle').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1}`;
+
+        document.getElementById('pNameA').textContent = match.a.name;
+        document.getElementById('pNameB').textContent = match.b.name;
+        document.getElementById('pAvatarA').textContent = match.a.name.charAt(0).toUpperCase();
+        document.getElementById('pAvatarB').textContent = match.b.name.charAt(0).toUpperCase();
+
+        const votesA = match.votes[match.a.id] || 0;
+        const votesB = match.votes[match.b.id] || 0;
+        document.getElementById('pVotesA').textContent = votesA;
+        document.getElementById('pVotesB').textContent = votesB;
+        updateVoteBar('p', votesA, votesB);
+      } else {
+        document.getElementById('presenterMatch').style.display = 'none';
+      }
+
+      // Contestants list
+      const cat = s.currentCategory;
+      const list = s.contestants[cat] || [];
+      const container = document.getElementById('presenterContestants');
+      container.innerHTML = list.map(c => `
+        <div class="contestant-item ${popular && s.categoryWinner && s.categoryWinner.id === c.id ? 'leading' : ''}" onclick="announceWinner('${c.id}', '${cat}')">
+          <div class="mini-avatar">${c.name.charAt(0).toUpperCase()}</div>
+          <div class="item-name">${c.name}</div>
+          <div class="item-meta">${popular ? ((s.categoryVotes[cat]?.[c.id] || 0) + ' votos') : ''}</div>
+        </div>
+      `).join('');
+
+      if (list.length === 0) {
+        container.innerHTML = '<p style="grid-column:1/-1;color:#64748b;text-align:center;padding:20px;">No hay concursantes inscritos en esta categoría</p>';
+      }
+
+      updateBracketView(s, 'presenterBracketRounds', 'presenterBracket', 'presenterBracketTitle');
+    }
+
+    // ─── Vote Bar Helper ─────────────────────────────────────
+    function updateVoteBar(prefix, a, b) {
+      const total = a + b;
+      const pctA = total > 0 ? (a / total * 100) : 50;
+      const pctB = total > 0 ? (b / total * 100) : 50;
+      document.getElementById(`${prefix}BarA`).style.width = pctA + '%';
+      document.getElementById(`${prefix}BarB`).style.width = pctB + '%';
+      document.getElementById(`${prefix}BarA`).textContent = total > 0 ? Math.round(pctA) + '%' : '';
+      document.getElementById(`${prefix}BarB`).textContent = total > 0 ? Math.round(pctB) + '%' : '';
+    }
+
+    // ─── Bracket View ────────────────────────────────────────
+    function updateBracketView(s, containerId, wrapperId, titleId) {
+      const cat = s.currentCategory;
+      if (isPopularCategory(cat)) {
+        document.getElementById(wrapperId).style.display = 'none';
+        return;
+      }
+      const bracket = s.brackets[cat];
+
+      if (!bracket || bracket.length === 0) {
+        document.getElementById(wrapperId).style.display = 'none';
+        return;
+      }
+
+      document.getElementById(wrapperId).style.display = '';
+      document.getElementById(titleId).textContent = `Bracket - ${cat === 'vestimenta' ? '👗 Vestimenta' : '🎭 Presentación'}`;
+
+      const container = document.getElementById(containerId);
+      const roundNames = ['Cuartos', 'Semifinal', 'Final'];
+
+      let html = '';
+      bracket.forEach((round, ri) => {
+        const rName = bracket.length <= 3 ? (roundNames[ri] || `Ronda ${ri + 1}`) : `Ronda ${ri + 1}`;
+        const isCurrent = ri === s.currentRound[cat];
+
+        html += `<div class="bracket-round">`;
+        html += `<div class="bracket-round-title">${rName}</div>`;
+
+        round.forEach((match, mi) => {
+          const isCurrentMatch = isCurrent && mi === s.currentMatch[cat];
+          const aWon = match.winner === match.a.id;
+          const bWon = match.winner === match.b.id;
+          const votesA = match.votes[match.a.id] || 0;
+          const votesB = match.votes[match.b.id] || 0;
+
+          html += `<div class="bracket-match ${isCurrentMatch ? 'current' : ''}">`;
+
+          if (!match.a.id.startsWith('bye_')) {
+            html += `<div class="bracket-player ${aWon ? 'winner' : ''} ${bWon && match.winner ? 'loser' : ''}">
+              <span class="bp-name">${match.a.name}</span>
+              <span class="bp-votes">${votesA}</span>
+            </div>`;
+          }
+          if (!match.b.id.startsWith('bye_')) {
+            html += `<div class="bracket-player ${bWon ? 'winner' : ''} ${aWon && match.winner ? 'loser' : ''}">
+              <span class="bp-name">${match.b.name}</span>
+              <span class="bp-votes">${votesB}</span>
+            </div>`;
+          }
+
+          html += `</div>`;
+        });
+
+        html += `</div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // ─── Voting ──────────────────────────────────────────────
+    function castVote(side) {
+      if (hasVoted || !currentState) return;
+      let contestantId = side;
+
+      if (!isPopularCategory(currentState.currentCategory)) {
+        if (!currentState.currentMatchData) return;
+        const match = currentState.currentMatchData;
+        contestantId = side === 'a' ? match.a.id : match.b.id;
+      }
+
+      socket.emit('vote', { contestantId });
+      selectedContestantId = contestantId;
+
+      if (!isPopularCategory(currentState.currentCategory)) {
+        const card = side === 'a' ? document.getElementById('vContA') : document.getElementById('vContB');
+        card.classList.add('voted');
+      }
+    }
+
+    socket.on('voteCast', () => {
+      hasVoted = true;
+      showToast('Voto registrado', 'success');
+    });
+
+    socket.on('voteError', (msg) => {
+      showToast(msg, 'error');
+    });
+
+    socket.on('votingOpened', () => {
+      hasVoted = false;
+      selectedContestantId = null;
+      document.getElementById('vContA')?.classList.remove('voted');
+      document.getElementById('vContB')?.classList.remove('voted');
+      document.querySelectorAll('.contestant-item.vote-option.voted').forEach(el => el.classList.remove('voted'));
+      if (myRole === 'voter') showToast('Votación abierta', 'info');
+    });
+
+    socket.on('matchResult', (data) => {
+      hasVoted = false;
+      selectedContestantId = null;
+      if (myRole !== 'presenter') {
+        showToast(`Ganador: ${data.winner.name}`, 'success');
+      }
+    });
+
+    socket.on('resetTriggered', () => {
+      window.location.reload();
+    });
+
+    // ─── Presenter Actions ───────────────────────────────────
+    function switchCat(cat) {
+      socket.emit('switchCategory', cat);
+    }
+
+    function toggleRegistration() {
+      socket.emit('toggleRegistration');
+    }
+
+    function startTournament() {
+      socket.emit('startTournament');
+      showToast(isPopularCategory(currentState?.currentCategory) ? 'Votación preparada' : 'Torneo iniciado', 'success');
+    }
+
+    function toggleVoting() {
+      if (currentState?.votingOpen) {
+        socket.emit('closeVoting');
+      } else {
+        socket.emit('openVoting');
+      }
+    }
+
+    function announceWinner(contestantId, category) {
+      const contestant = currentState?.contestants?.[category]?.find(c => c.id === contestantId);
+      if (!contestant) return;
+      if (currentState?.announcedWinner) {
+        socket.emit('clearWinner');
+      } else {
+        socket.emit('announceWinner', { name: contestant.name, category });
+      }
+    }
+
+    function resetAll() {
+      if (confirm('¿Seguro que quieres reiniciar todo?')) {
+        socket.emit('resetAll');
+        showToast('Todo reiniciado', 'info');
+      }
+    }
+
+    // ─── Toast ───────────────────────────────────────────────
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type} show`;
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ─── Confetti ────────────────────────────────────────────
+    function launchConfetti() {
+      const colors = ['#0ea5e9', '#f59e0b', '#10b981', '#f43f5e', '#8b5cf6', '#06b6d4', '#34d399'];
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.top = '-10px';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.width = (6 + Math.random() * 8) + 'px';
+        piece.style.height = (6 + Math.random() * 8) + 'px';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+        document.body.appendChild(piece);
+
+        const duration = 2000 + Math.random() * 2000;
+        const xDrift = (Math.random() - 0.5) * 200;
+
+        piece.animate([
+          { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
+          { transform: `translate(${xDrift}px, ${window.innerHeight + 50}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+        ], { duration, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' })
+        .onfinish = () => piece.remove();
+      }
+    }
+
+    // ─── Enter key support ───────────────────────────────────
+    document.getElementById('nameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') doRegister();
+    });
+
+    // Click winner overlay to close (presenter only)
+    document.getElementById('winnerOverlay').addEventListener('click', () => {
+      if (myRole === 'presenter') {
+        socket.emit('clearWinner');
+      }
+    });
+  </script>
+</body>
+</html>
