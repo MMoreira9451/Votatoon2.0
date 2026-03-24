@@ -948,7 +948,7 @@
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      z-index: 1000;
+      z-index: 2000;
       background: rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(8px);
       justify-content: center;
@@ -957,6 +957,11 @@
 
     .winner-overlay.active {
       display: flex;
+    }
+
+    .winner-overlay.tie-break {
+      z-index: 2002;
+      background: rgba(4, 24, 32, 0.74);
     }
 
     .winner-card {
@@ -1003,6 +1008,108 @@
       color: #0c4a6e;
       font-weight: 500;
       text-transform: capitalize;
+    }
+
+    .roulette-shell {
+      width: min(92vw, 620px);
+      text-align: center;
+      padding: 34px 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .roulette-title {
+      font-size: 1.15rem;
+      color: #e6fbff;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .roulette-subtitle {
+      color: rgba(236, 255, 255, 0.92);
+      font-size: 1rem;
+      margin-bottom: 22px;
+    }
+
+    .roulette-window {
+      position: relative;
+      padding: 20px 16px 8px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.12));
+      border: 1px solid rgba(255,255,255,0.48);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+      cursor: pointer;
+    }
+
+    .roulette-wheel-wrap {
+      position: relative;
+      width: min(84vw, 460px);
+      margin: 0 auto;
+      aspect-ratio: 1 / 1;
+    }
+
+    .roulette-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.22));
+    }
+
+    .roulette-pointer {
+      position: absolute;
+      left: 50%;
+      top: -8px;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-top: 34px solid rgba(255, 214, 102, 0.98);
+      border-bottom: 0;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .roulette-pointer::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: -28px;
+      transform: translateX(-50%);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 247, 214, 0.95);
+      box-shadow: 0 0 0 4px rgba(255, 214, 102, 0.24);
+    }
+
+    .roulette-wheel-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 6%;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.5);
+      box-shadow: inset 0 0 0 10px rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
+
+    .roulette-status {
+      margin-top: 18px;
+      color: rgba(236,255,255,0.92);
+      font-size: 0.98rem;
+      min-height: 1.4em;
+    }
+
+    .roulette-actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .roulette-actions .btn {
+      min-width: 220px;
     }
 
     /* ─── Bracket View ───────────────────────────────────────── */
@@ -1732,6 +1839,7 @@
           <button class="btn btn-primary" id="btnToggleReg" onclick="toggleRegistration()">Cerrar inscripciones</button>
           <button class="btn btn-success" id="btnStartTournament" onclick="startTournament()">Iniciar torneo</button>
           <button class="btn btn-warning" id="btnToggleVote" onclick="toggleVoting()" disabled>Abrir votación</button>
+          <button class="btn btn-glass" id="btnTieBreak" onclick="spinTieBreak()" style="display:none;">Resolver empate</button>
           <button class="btn btn-danger" id="btnReset" onclick="resetAll()">Reiniciar todo</button>
         </div>
 
@@ -1792,6 +1900,23 @@
     </div>
   </div>
 
+  <div class="winner-overlay tie-break" id="tieBreakOverlay">
+    <div class="roulette-shell glass-strong">
+      <div class="roulette-title">Ruleta de desempate</div>
+      <div class="roulette-subtitle" id="tieBreakCategoryLabel">Empate detectado</div>
+      <div class="roulette-window" onclick="spinTieBreak()">
+        <div class="roulette-wheel-wrap">
+          <div class="roulette-pointer"></div>
+          <canvas class="roulette-canvas" id="rouletteCanvas" width="460" height="460"></canvas>
+        </div>
+      </div>
+      <div class="roulette-status" id="rouletteStatus">Esperando al presentador...</div>
+      <div class="roulette-actions">
+        <button class="btn btn-warning" id="overlayTieBreakButton" onclick="spinTieBreak()" style="display:none;">Girar ruleta</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
@@ -1805,6 +1930,10 @@
     let hasVoted = false;
     let selectedContestantId = null;
     let pendingRegistration = false;
+    let tieBreakSpinTimer = null;
+    let tieBreakWheelAngle = -Math.PI / 2;
+    let tieBreakWheelFrame = null;
+    let tieBreakWheelKey = '';
     const adminParam = new URLSearchParams(window.location.search).get('admin');
     const isAdmin = adminParam === 'votatoon2026';
     if (isAdmin) {
@@ -1881,6 +2010,8 @@
       else if (myRole === 'contestant') updateContestantUI(s);
       else if (myRole === 'presenter') updatePresenterUI(s);
 
+      updateTieBreakUI(s);
+
       // Winner overlay
       if (s.announcedWinner) {
         document.getElementById('winnerName').textContent = s.announcedWinner.name;
@@ -1890,6 +2021,244 @@
       } else {
         document.getElementById('winnerOverlay').classList.remove('active');
       }
+    }
+
+    function updateTieBreakUI(s) {
+      const overlay = document.getElementById('tieBreakOverlay');
+      const label = document.getElementById('tieBreakCategoryLabel');
+      const status = document.getElementById('rouletteStatus');
+      const tieBreakBtn = document.getElementById('btnTieBreak');
+      const overlayTieBreakButton = document.getElementById('overlayTieBreakButton');
+
+      if (!s.tieBreak?.active) {
+        overlay.classList.remove('active');
+        resetTieBreakWheel();
+        status.textContent = '';
+        if (tieBreakBtn) tieBreakBtn.style.display = 'none';
+        if (overlayTieBreakButton) overlayTieBreakButton.style.display = 'none';
+        return;
+      }
+
+      const candidates = s.tieBreak.candidates || [];
+      const candidateKey = candidates.map(candidate => candidate.id).join('|');
+      if (!s.tieBreak.spinning && tieBreakWheelKey !== candidateKey) {
+        resetTieBreakWheel(candidates);
+      } else {
+        drawTieBreakWheel(candidates);
+      }
+      tieBreakWheelKey = candidateKey;
+      overlay.classList.add('active');
+      label.textContent = `Empate en ${getCategoryLabel(s.tieBreak.category)}`;
+
+      if (s.tieBreak.spinning) {
+        status.textContent = 'La ruleta está girando...';
+      } else {
+        status.textContent = myRole === 'presenter'
+          ? 'Toca la ruleta o el boton para resolver el empate'
+          : 'Esperando al presentador para girar la ruleta';
+      }
+
+      if (tieBreakBtn && myRole === 'presenter') {
+        tieBreakBtn.style.display = '';
+        tieBreakBtn.textContent = s.tieBreak.spinning ? 'Ruleta en curso' : 'Resolver empate';
+        tieBreakBtn.disabled = !!s.tieBreak.spinning;
+      }
+
+      if (overlayTieBreakButton) {
+        if (myRole === 'presenter') {
+          overlayTieBreakButton.style.display = '';
+          overlayTieBreakButton.textContent = s.tieBreak.spinning ? 'Ruleta en curso' : 'Girar ruleta';
+          overlayTieBreakButton.disabled = !!s.tieBreak.spinning;
+        } else {
+          overlayTieBreakButton.style.display = 'none';
+        }
+      }
+    }
+
+    function resetTieBreakWheel(candidates = []) {
+      if (tieBreakWheelFrame) {
+        cancelAnimationFrame(tieBreakWheelFrame);
+        tieBreakWheelFrame = null;
+      }
+      tieBreakWheelAngle = -Math.PI / 2;
+      tieBreakWheelKey = candidates.map(candidate => candidate.id).join('|');
+      drawTieBreakWheel(candidates);
+    }
+
+    function getTieBreakWheelPalette(index) {
+      const palette = [
+        '#2ec4ff',
+        '#4dba2f',
+        '#ffd166',
+        '#ff8fab',
+        '#7dd3fc',
+        '#84cc16',
+        '#f9a8d4',
+        '#38bdf8',
+      ];
+      return palette[index % palette.length];
+    }
+
+    function splitTieBreakLabel(name, maxLineLength = 12) {
+      const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return ['Sin nombre'];
+      const lines = [''];
+
+      words.forEach((word) => {
+        const current = lines[lines.length - 1];
+        const next = current ? `${current} ${word}` : word;
+        if (next.length <= maxLineLength || !current) {
+          lines[lines.length - 1] = next;
+        } else if (lines.length < 2) {
+          lines.push(word);
+        } else {
+          lines[lines.length - 1] = `${lines[lines.length - 1]} ${word}`;
+        }
+      });
+
+      return lines.slice(0, 2).map((line, index, arr) => {
+        if (index === arr.length - 1 && line.length > maxLineLength + 3) {
+          return `${line.slice(0, maxLineLength)}...`;
+        }
+        return line;
+      });
+    }
+
+    function drawTieBreakWheel(candidates = []) {
+      const canvas = document.getElementById('rouletteCanvas');
+      if (!canvas) return;
+
+      const size = Math.max(320, Math.min(460, Math.floor(window.innerWidth * 0.78)));
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== size * dpr || canvas.height !== size * dpr) {
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, size, size);
+
+      if (!candidates.length) return;
+
+      const center = size / 2;
+      const outerRadius = size * 0.45;
+      const innerRadius = size * 0.17;
+      const arc = (Math.PI * 2) / candidates.length;
+
+      ctx.save();
+      ctx.translate(center, center);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, outerRadius + 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.78)';
+      ctx.fill();
+
+      for (let i = 0; i < candidates.length; i += 1) {
+        const start = tieBreakWheelAngle + i * arc;
+        const end = start + arc;
+        const mid = start + arc / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, outerRadius, start, end, false);
+        ctx.closePath();
+        ctx.fillStyle = getTieBreakWheelPalette(i);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.stroke();
+
+        const labelRadius = candidates.length <= 2 ? size * 0.27 : size * 0.3;
+        const labelX = Math.cos(mid) * labelRadius;
+        const labelY = Math.sin(mid) * labelRadius;
+        const lines = splitTieBreakLabel(candidates[i].name, candidates.length <= 2 ? 14 : 11);
+        const fontSize = Math.max(14, Math.floor(size * (candidates.length <= 2 ? 0.043 : 0.034)));
+        const lineHeight = Math.floor(fontSize * 1.18);
+        const paddingX = 18;
+        const paddingY = 12;
+
+        ctx.save();
+        ctx.font = `700 ${fontSize}px Fredoka, sans-serif`;
+        const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
+        const boxWidth = Math.min(textWidth + paddingX * 2, size * 0.31);
+        const boxHeight = lines.length * lineHeight + paddingY * 2;
+        const boxX = labelX - boxWidth / 2;
+        const boxY = labelY - boxHeight / 2;
+
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 20);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#0b4f63';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        lines.forEach((line, lineIndex) => {
+          const offset = (lineIndex - (lines.length - 1) / 2) * lineHeight;
+          ctx.fillText(line, labelX, labelY + offset);
+        });
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, innerRadius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(235,255,255,0.98)';
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.86)';
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f766e';
+      ctx.font = `700 ${Math.max(16, Math.floor(size * 0.044))}px Fredoka, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('Votatoon', 0, -4);
+      ctx.font = `600 ${Math.max(10, Math.floor(size * 0.024))}px Fredoka, sans-serif`;
+      ctx.fillStyle = '#0c4a6e';
+      ctx.fillText('Desempate', 0, 16);
+      ctx.restore();
+    }
+
+    function animateTieBreakWheel(candidates, winnerId, duration) {
+      if (tieBreakWheelFrame) {
+        cancelAnimationFrame(tieBreakWheelFrame);
+      }
+
+      const winnerIndex = candidates.findIndex(candidate => candidate.id === winnerId);
+      if (winnerIndex === -1) return;
+
+      const arc = (Math.PI * 2) / candidates.length;
+      const currentAngle = tieBreakWheelAngle;
+      const baseTargetAngle = -Math.PI / 2 - (winnerIndex * arc + arc / 2);
+      let targetAngle = baseTargetAngle;
+      while (targetAngle <= currentAngle + Math.PI * 2 * 5) {
+        targetAngle += Math.PI * 2;
+      }
+
+      const startTime = performance.now();
+      const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+      const step = (now) => {
+        const progress = Math.min(1, (now - startTime) / duration);
+        tieBreakWheelAngle = currentAngle + (targetAngle - currentAngle) * easeOutCubic(progress);
+        drawTieBreakWheel(candidates);
+        if (progress < 1) {
+          tieBreakWheelFrame = requestAnimationFrame(step);
+        } else {
+          tieBreakWheelFrame = null;
+          tieBreakWheelAngle = targetAngle;
+          drawTieBreakWheel(candidates);
+        }
+      };
+
+      tieBreakWheelFrame = requestAnimationFrame(step);
     }
 
     function isPopularCategory(category) {
@@ -2068,7 +2437,13 @@
 
       // Voting button
       const voteBtn = document.getElementById('btnToggleVote');
+      const tieBreakBtn = document.getElementById('btnTieBreak');
       const match = s.currentMatchData;
+      if (s.tieBreak?.active) {
+        voteBtn.disabled = true;
+        voteBtn.textContent = 'Empate pendiente';
+        voteBtn.className = 'btn btn-warning';
+      }
       if (popular) {
         voteBtn.disabled = false;
         if (s.votingOpen) {
@@ -2105,6 +2480,15 @@
       if (s.categoryWinner) {
         voteBtn.disabled = true;
         voteBtn.textContent = 'Categoría finalizada';
+      }
+
+      if (tieBreakBtn) {
+        if (s.tieBreak?.active) {
+          tieBreakBtn.style.display = '';
+          tieBreakBtn.disabled = !!s.tieBreak.spinning;
+        } else {
+          tieBreakBtn.style.display = 'none';
+        }
       }
 
       // Match display
@@ -2275,6 +2659,30 @@
       window.location.reload();
     });
 
+    socket.on('tieBreakReady', ({ category }) => {
+      if (currentState?.tieBreak?.active) {
+        updateTieBreakUI(currentState);
+      }
+      if (myRole === 'presenter') {
+        showToast(`Empate detectado en ${getCategoryLabel(category)}`, 'info');
+      }
+    });
+
+    socket.on('tieBreakStarted', ({ candidates, winnerId, duration }) => {
+      const overlay = document.getElementById('tieBreakOverlay');
+      const status = document.getElementById('rouletteStatus');
+      overlay.classList.add('active');
+      drawTieBreakWheel(candidates);
+      animateTieBreakWheel(candidates, winnerId, duration);
+      status.textContent = 'Girando...';
+
+      if (tieBreakSpinTimer) clearTimeout(tieBreakSpinTimer);
+      tieBreakSpinTimer = setTimeout(() => {
+        const winner = candidates.find(candidate => candidate.id === winnerId);
+        status.textContent = winner ? `Ganador al azar: ${winner.name}` : 'Desempate resuelto';
+      }, duration);
+    });
+
     // ─── Presenter Actions ───────────────────────────────────
     function switchCat(cat) {
       socket.emit('switchCategory', cat);
@@ -2296,6 +2704,18 @@
         socket.emit('openVoting');
       }
     }
+
+    function spinTieBreak() {
+      if (myRole !== 'presenter') return;
+      if (!currentState?.tieBreak?.active || currentState.tieBreak.spinning) return;
+      socket.emit('spinTieBreak');
+    }
+
+    window.addEventListener('resize', () => {
+      if (currentState?.tieBreak?.active) {
+        drawTieBreakWheel(currentState.tieBreak.candidates || []);
+      }
+    });
 
     function announceWinner(contestantId, category) {
       const contestant = currentState?.contestants?.[category]?.find(c => c.id === contestantId);

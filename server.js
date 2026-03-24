@@ -29,6 +29,10 @@ const state = {
   votingOpen: false,
   categoryVotes: { vestimenta: {}, presentacion: {} },
   categoryCompleted: { vestimenta: false, presentacion: false },
+  categoryResolvedWinner: { vestimenta: null, presentacion: null },
+
+  // Tie-break roulette
+  tieBreak: null,
 
   // Who voted in the current match: Set of socket ids
   voted: new Set(),
@@ -179,6 +183,9 @@ function getCategoryLeaderboard(category) {
 function getCategoryWinner(category) {
   if (state.categoryModes[category] === "popular") {
     if (!state.categoryCompleted[category]) return null;
+    if (state.categoryResolvedWinner[category]) {
+      return state.contestants[category].find((c) => c.id === state.categoryResolvedWinner[category]) || null;
+    }
     const leaderboard = getCategoryLeaderboard(category);
     if (!leaderboard.length) return null;
     if (leaderboard[0].votes <= 0) return null;
@@ -207,12 +214,61 @@ function getFullState() {
     categoryModes: state.categoryModes,
     categoryVotes: state.categoryVotes,
     categoryCompleted: state.categoryCompleted,
+    categoryResolvedWinner: state.categoryResolvedWinner,
     categoryLeaderboard: getCategoryLeaderboard(state.currentCategory),
+    tieBreak: state.tieBreak,
     registrationOpen: state.registrationOpen,
     announcedWinner: state.announcedWinner,
     currentMatchData: getCurrentMatch(state.currentCategory),
     categoryWinner: getCategoryWinner(state.currentCategory),
   };
+}
+
+function createTieBreak(category, candidates, context) {
+  state.tieBreak = {
+    active: true,
+    spinning: false,
+    category,
+    candidates,
+    context,
+  };
+}
+
+function clearTieBreak() {
+  state.tieBreak = null;
+}
+
+function resolveTournamentTieBreak(winnerId) {
+  const tieBreak = state.tieBreak;
+  if (!tieBreak) return null;
+
+  const category = tieBreak.category;
+  const match = getCurrentMatch(category);
+  if (!match) return null;
+
+  match.winner = winnerId;
+  state.currentMatch[category]++;
+  const bracket = state.brackets[category];
+  const round = bracket[state.currentRound[category]];
+  if (state.currentMatch[category] >= round.length) {
+    buildNextRound(category);
+  }
+
+  const winner = winnerId === match.a.id ? match.a : match.b;
+  clearTieBreak();
+  return { winner, match, category };
+}
+
+function resolvePopularTieBreak(winnerId) {
+  const tieBreak = state.tieBreak;
+  if (!tieBreak) return null;
+
+  const category = tieBreak.category;
+  state.categoryCompleted[category] = true;
+  state.categoryResolvedWinner[category] = winnerId;
+  const winner = state.contestants[category].find((c) => c.id === winnerId) || null;
+  clearTieBreak();
+  return { winner, category, leaderboard: getCategoryLeaderboard(category) };
 }
 
 // ─── Socket.IO ───────────────────────────────────────────────────────
@@ -286,6 +342,8 @@ io.on("connection", (socket) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     state.registrationOpen = false;
     state.categoryCompleted.presentacion = false;
+    state.categoryResolvedWinner.presentacion = null;
+    clearTieBreak();
     state.categoryVotes.presentacion = Object.fromEntries(
       state.contestants.presentacion.map((contestant) => [contestant.id, 0])
     );
@@ -302,6 +360,7 @@ io.on("connection", (socket) => {
   socket.on("openVoting", () => {
     if (state.users[socket.id]?.role !== "presenter") return;
     const category = state.currentCategory;
+    if (state.tieBreak?.active) return;
 
     if (state.categoryModes[category] === "popular") {
       if (state.categoryCompleted[category]) return;
@@ -322,10 +381,24 @@ io.on("connection", (socket) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     state.votingOpen = false;
     const category = state.currentCategory;
+    if (state.tieBreak?.active) return;
 
     if (state.categoryModes[category] === "popular") {
-      state.categoryCompleted[category] = true;
       state.voted = new Set();
+      const leaderboard = getCategoryLeaderboard(category);
+      if (leaderboard.length > 1 && leaderboard[0].votes === leaderboard[1].votes) {
+        const topVotes = leaderboard[0].votes;
+        const candidates = leaderboard
+          .filter((contestant) => contestant.votes === topVotes)
+          .map((contestant) => ({ id: contestant.id, name: contestant.name }));
+        createTieBreak(category, candidates, { type: "popular" });
+        io.emit("state", getFullState());
+        io.emit("tieBreakReady", { category, candidates });
+        return;
+      }
+
+      state.categoryCompleted[category] = true;
+      state.categoryResolvedWinner[category] = leaderboard[0]?.id || null;
       const winner = getCategoryWinner(category);
       io.emit("state", getFullState());
       if (winner) {
@@ -344,11 +417,17 @@ io.on("connection", (socket) => {
     const aVotes = match.votes[match.a.id] || 0;
     const bVotes = match.votes[match.b.id] || 0;
 
-    if (aVotes >= bVotes) {
-      match.winner = match.a.id;
-    } else {
-      match.winner = match.b.id;
+    if (aVotes === bVotes) {
+      state.voted = new Set();
+      createTieBreak(category, [
+        { id: match.a.id, name: match.a.name },
+        { id: match.b.id, name: match.b.name },
+      ], { type: "match" });
+      io.emit("state", getFullState());
+      io.emit("tieBreakReady", { category, candidates: state.tieBreak.candidates });
+      return;
     }
+    match.winner = aVotes > bVotes ? match.a.id : match.b.id;
 
     // Move to next match
     state.currentMatch[state.currentCategory]++;
@@ -372,11 +451,43 @@ io.on("connection", (socket) => {
   socket.on("switchCategory", (category) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     if (state.categories.includes(category)) {
+      if (state.tieBreak?.active) return;
       state.votingOpen = false;
       state.currentCategory = category;
       state.voted = new Set();
       io.emit("state", getFullState());
     }
+  });
+
+  socket.on("spinTieBreak", () => {
+    if (state.users[socket.id]?.role !== "presenter") return;
+    if (!state.tieBreak?.active || state.tieBreak.spinning) return;
+
+    const winnerCandidate = state.tieBreak.candidates[Math.floor(Math.random() * state.tieBreak.candidates.length)];
+    state.tieBreak.spinning = true;
+    const duration = 4500;
+    io.emit("state", getFullState());
+    io.emit("tieBreakStarted", {
+      category: state.tieBreak.category,
+      candidates: state.tieBreak.candidates,
+      winnerId: winnerCandidate.id,
+      duration,
+    });
+
+    setTimeout(() => {
+      let result = null;
+      if (state.tieBreak?.context?.type === "popular") {
+        result = resolvePopularTieBreak(winnerCandidate.id);
+      } else {
+        result = resolveTournamentTieBreak(winnerCandidate.id);
+      }
+
+      state.voted = new Set();
+      io.emit("state", getFullState());
+      if (result?.winner) {
+        io.emit("matchResult", result);
+      }
+    }, duration);
   });
 
   // Presenter: announce winner
@@ -454,10 +565,12 @@ io.on("connection", (socket) => {
     state.votingOpen = false;
     state.categoryVotes = { vestimenta: {}, presentacion: {} };
     state.categoryCompleted = { vestimenta: false, presentacion: false };
+    state.categoryResolvedWinner = { vestimenta: null, presentacion: null };
     state.voted = new Set();
     state.registrationOpen = true;
     state.announcedWinner = null;
     state.currentCategory = "vestimenta";
+    clearTieBreak();
     io.emit("state", getFullState());
     io.emit("resetTriggered");
   });
