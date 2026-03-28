@@ -41,13 +41,17 @@ const state = {
   registrationOpen: true,
 
   // Final winner announced
-  announcedWinner: null, // { name, category }
+  announcedWinner: null, // { id, name, category, photo }
 
   // Connected users
   users: {}, // socketId -> { role, name, category? }
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
+function findContestantById(category, contestantId) {
+  return state.contestants[category]?.find((contestant) => contestant.id === contestantId) || null;
+}
+
 function buildBracket(category) {
   const list = state.contestants[category];
   if (list.length < 2) return;
@@ -276,8 +280,11 @@ io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
   // Register user
-  socket.on("register", ({ role, name, category, adminKey }) => {
+  socket.on("register", ({ role, name, category, adminKey, photo }) => {
     const normalizedName = typeof name === "string" ? name.trim() : "";
+    const normalizedPhoto = typeof photo === "string" && photo.startsWith("data:image/")
+      ? photo
+      : null;
 
     // Only allow presenter role with correct admin key
     if (role === "presenter" && adminKey !== "votatoon2026") {
@@ -315,11 +322,11 @@ io.on("connection", (socket) => {
       }
     }
 
-    state.users[socket.id] = { role, name: normalizedName, category };
+    state.users[socket.id] = { role, name: normalizedName, category, photo: normalizedPhoto };
 
     if (role === "contestant" && category) {
       const id = "c_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
-      const contestant = { name: normalizedName, id };
+      const contestant = { name: normalizedName, id, photo: normalizedPhoto };
       state.contestants[category].push(contestant);
       socket.contestantId = id;
       socket.contestantCategory = category;
@@ -491,11 +498,18 @@ io.on("connection", (socket) => {
   });
 
   // Presenter: announce winner
-  socket.on("announceWinner", ({ name, category }) => {
+  socket.on("announceWinner", ({ contestantId, category }) => {
     if (state.users[socket.id]?.role !== "presenter") return;
-    state.announcedWinner = { name, category };
+    const contestant = findContestantById(category, contestantId);
+    if (!contestant) return;
+    state.announcedWinner = {
+      id: contestant.id,
+      name: contestant.name,
+      category,
+      photo: contestant.photo || null,
+    };
     io.emit("state", getFullState());
-    io.emit("winnerAnnounced", { name, category });
+    io.emit("winnerAnnounced", state.announcedWinner);
   });
 
   // Presenter: clear winner announcement
