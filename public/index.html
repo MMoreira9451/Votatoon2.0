@@ -539,7 +539,8 @@
 
     #voterScreen.active,
     #contestantScreen.active,
-    #presenterScreen.active {
+    #presenterScreen.active,
+    #projectionScreen.active {
       display: block !important;
     }
 
@@ -1008,6 +1009,24 @@
       background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.15));
     }
 
+    .contestant-card.pass-direct {
+      cursor: default;
+      border-color: rgba(77, 186, 47, 0.38);
+      background: linear-gradient(180deg, rgba(250,255,247,0.98) 0%, rgba(207,239,192,0.86) 10%, rgba(255,255,255,0.9) 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 18px rgba(77, 186, 47, 0.14);
+    }
+
+    .contestant-card.pass-direct:hover {
+      transform: none;
+      border-color: rgba(77, 186, 47, 0.42);
+      background: linear-gradient(180deg, rgba(250,255,247,0.98) 0%, rgba(207,239,192,0.86) 10%, rgba(255,255,255,0.9) 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 18px rgba(77, 186, 47, 0.14);
+    }
+
+    .contestant-card.pass-direct::after {
+      display: none;
+    }
+
     .contestant-card .avatar {
       width: 72px;
       height: 72px;
@@ -1023,6 +1042,7 @@
 
     .avatar-a { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
     .avatar-b { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+    .avatar-bye { background: linear-gradient(135deg, #4dba2f, #8fd655); }
 
     .contestant-card .name {
       font-size: 1.3rem;
@@ -1237,6 +1257,243 @@
       background: linear-gradient(135deg, rgba(194,255,231,0.9), rgba(255,255,255,0.55));
     }
 
+    /* ─── Projection Screen ─────────────────────────────────── */
+    .projection-shell {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .projection-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .projection-header h2 {
+      color: #0c4a6e;
+      font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+      margin: 0 0 8px;
+    }
+
+    .projection-header p {
+      color: #4f6774;
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .projection-badge {
+      flex-shrink: 0;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(76,190,232,0.86), rgba(112,228,203,0.72));
+      color: #f8feff;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: 0 10px 24px rgba(49, 119, 150, 0.18);
+    }
+
+    .projection-stage {
+      display: grid;
+      gap: 20px;
+    }
+
+    .projection-stage.waiting {
+      text-align: center;
+      padding: 64px 24px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.62), rgba(215,235,241,0.48));
+      border: 1px solid rgba(255,255,255,0.62);
+    }
+
+    .projection-stage.waiting h3 {
+      color: #0c4a6e;
+      font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+      margin-bottom: 10px;
+    }
+
+    .projection-stage.waiting p {
+      color: #5c7280;
+      font-size: 1.05rem;
+      margin: 0;
+    }
+
+    .projection-duel {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .projection-card {
+      min-height: 420px;
+      padding: 26px 22px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(196,196,196,0.78) 7%, rgba(255,255,255,0.92) 100%);
+      border: 1.5px solid rgba(255,255,255,0.78);
+      box-shadow: 0 10px 30px rgba(40, 90, 118, 0.14);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .projection-card.pass-direct {
+      background: linear-gradient(180deg, rgba(250,255,247,0.98) 0%, rgba(207,239,192,0.88) 9%, rgba(255,255,255,0.94) 100%);
+      border-color: rgba(77,186,47,0.35);
+    }
+
+    .projection-photo {
+      width: min(18vw, 220px);
+      height: min(18vw, 220px);
+      min-width: 140px;
+      min-height: 140px;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 3px solid rgba(255,255,255,0.72);
+      box-shadow: 0 16px 28px rgba(37, 99, 142, 0.18);
+      background: linear-gradient(135deg, rgba(233,250,255,0.96), rgba(187,228,242,0.8));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0d718e;
+      font-size: clamp(3rem, 5vw, 4.4rem);
+      font-weight: 700;
+    }
+
+    .projection-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .projection-name {
+      color: #0c4a6e;
+      font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .projection-subcopy {
+      color: #5e7481;
+      font-size: 1rem;
+      min-height: 1.2em;
+    }
+
+    .projection-count {
+      color: #0ea5e9;
+      font-size: clamp(2.2rem, 4.2vw, 3.5rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .projection-count.pass-direct {
+      color: #2f7d1d;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+    }
+
+    .projection-vs {
+      font-size: clamp(2rem, 3vw, 2.8rem);
+      font-weight: 700;
+      color: #f59e0b;
+      text-shadow: 0 6px 14px rgba(245, 158, 11, 0.25);
+    }
+
+    .projection-bar {
+      margin-top: 8px;
+    }
+
+    .projection-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 8px;
+      color: #526a77;
+      font-weight: 600;
+      flex-wrap: wrap;
+    }
+
+    .projection-ranking {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .projection-ranking-item {
+      display: grid;
+      grid-template-columns: auto 92px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 18px 20px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(196,196,196,0.76) 7%, rgba(255,255,255,0.92) 100%);
+      border: 1.5px solid rgba(50,173,218,0.2);
+      box-shadow: 0 10px 24px rgba(40, 90, 118, 0.12);
+    }
+
+    .projection-ranking-item.leading {
+      border-color: rgba(77, 186, 47, 0.45);
+      background: linear-gradient(180deg, rgba(240,255,233,0.98) 0%, rgba(212,241,197,0.84) 8%, rgba(255,255,255,0.94) 100%);
+    }
+
+    .projection-rank {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      color: white;
+      font-weight: 700;
+      font-size: 1.15rem;
+      box-shadow: 0 10px 18px rgba(14, 165, 233, 0.18);
+    }
+
+    .projection-ranking-photo {
+      width: 92px;
+      height: 92px;
+      border-radius: 22px;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(233,250,255,0.96), rgba(187,228,242,0.8));
+      border: 2px solid rgba(255,255,255,0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0d718e;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .projection-ranking-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .projection-ranking-name {
+      color: #0c4a6e;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .projection-ranking-votes {
+      color: #0f6d8f;
+      font-size: 1.6rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     /* ─── Winner Overlay ─────────────────────────────────────── */
     .winner-overlay {
       display: none;
@@ -1258,11 +1515,82 @@
       background: rgba(4, 24, 32, 0.74);
     }
 
+    .winner-overlay.drumroll {
+      z-index: 2001;
+      background: rgba(5, 24, 31, 0.66);
+    }
+
     .winner-card {
       padding: 48px 56px;
       text-align: center;
       animation: winnerPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
       max-width: 500px;
+    }
+
+    .winner-card.drumroll-card {
+      max-width: 560px;
+      color: #effcff;
+      background: linear-gradient(180deg, rgba(15,62,78,0.92), rgba(10,36,48,0.9));
+      border: 1.5px solid rgba(189, 247, 255, 0.34);
+    }
+
+    .winner-card.drumroll-card::after {
+      background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0) 26%);
+    }
+
+    .drumroll-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(46,196,255,0.28), rgba(125,211,252,0.14));
+      border: 1px solid rgba(196,245,255,0.34);
+      color: #ddfbff;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .drumroll-emoji {
+      font-size: 4.6rem;
+      margin-bottom: 14px;
+      animation: drumPulse 1.25s ease-in-out infinite;
+    }
+
+    .drumroll-title {
+      font-size: 2.2rem;
+      color: #f8feff;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .drumroll-subtitle {
+      color: rgba(230, 251, 255, 0.86);
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+    }
+
+    .drumroll-name {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #ffd166;
+      text-shadow: 0 4px 14px rgba(255, 209, 102, 0.24);
+      margin-bottom: 8px;
+    }
+
+    .drumroll-category {
+      font-size: 1.08rem;
+      color: #9fe7ff;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    @keyframes drumPulse {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-8px) scale(1.04); }
     }
 
     .winner-photo-frame {
@@ -1551,6 +1879,15 @@
       font-size: 0.85rem;
     }
 
+    .bracket-player.pass-direct {
+      background: linear-gradient(90deg, rgba(77,186,47,0.16), rgba(176,248,159,0.1));
+    }
+
+    .bracket-player.pass-direct .bp-votes {
+      color: #2f7d1d;
+      font-weight: 700;
+    }
+
     /* ─── Status Bar ─────────────────────────────────────────── */
     .status-bar {
       padding: 12px 20px;
@@ -1783,6 +2120,32 @@
 
       .presenter-controls {
         flex-direction: column;
+      }
+
+      .projection-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .projection-badge {
+        align-self: stretch;
+        text-align: center;
+      }
+
+      .projection-duel {
+        grid-template-columns: 1fr;
+      }
+
+      .projection-vs {
+        justify-self: center;
+      }
+
+      .projection-card {
+        min-height: 320px;
+      }
+
+      .projection-ranking {
+        grid-template-columns: 1fr;
       }
 
       .presenter-controls .btn,
@@ -2095,6 +2458,51 @@
 
       .contestant-photo-preview {
         margin: 0 auto;
+      }
+
+      .projection-shell {
+        padding: 20px 16px;
+      }
+
+      .projection-stage.waiting {
+        padding: 42px 16px;
+      }
+
+      .projection-card {
+        min-height: auto;
+        padding: 18px 14px;
+        border-radius: 22px;
+      }
+
+      .projection-photo {
+        width: 120px;
+        height: 120px;
+        min-width: 120px;
+        min-height: 120px;
+        border-radius: 20px;
+        font-size: 2.4rem;
+      }
+
+      .projection-meta {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .projection-ranking-item {
+        grid-template-columns: auto 72px 1fr;
+        padding: 14px;
+        gap: 12px;
+      }
+
+      .projection-ranking-votes {
+        grid-column: 2 / 4;
+        justify-self: end;
+      }
+
+      .projection-ranking-photo {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
       }
 
       .winner-photo-frame {
@@ -2684,9 +3092,78 @@
         <div class="bracket-rounds" id="presenterBracketRounds"></div>
       </div>
     </div>
+
+    <!-- ═══ PROJECTION SCREEN ═══ -->
+    <div id="projectionScreen" class="screen">
+      <div class="status-bar glass" id="projectionStatus">
+        <div>
+          <span class="status-dot yellow"></span>
+          <span id="projectionStatusText">Esperando al presentador...</span>
+        </div>
+        <div id="projectionCategory" style="font-weight:600;color:#0c4a6e;"></div>
+      </div>
+
+      <div class="projection-shell glass-strong fade-in">
+        <div class="projection-header">
+          <div>
+            <h2 id="projectionTitle">Pantalla de proyección</h2>
+            <p id="projectionSubtitle">Los votos aparecerán aquí en vivo</p>
+          </div>
+          <div class="projection-badge">Votación en vivo</div>
+        </div>
+
+        <div class="projection-stage waiting" id="projectionWaiting">
+          <h3>Esperando la votación</h3>
+          <p id="projectionWaitingText">Cuando el presentador abra la votación, esta pantalla mostrará fotos, nombres y votos en tiempo real.</p>
+        </div>
+
+        <div id="projectionLive" style="display:none;">
+          <div id="projectionDuelView" style="display:none;">
+            <div class="projection-duel">
+              <div class="projection-card" id="projCardA">
+                <div class="projection-photo" id="projPhotoA">A</div>
+                <div class="projection-name" id="projNameA">-</div>
+                <div class="projection-subcopy" id="projSubcopyA">Concursante</div>
+                <div class="projection-count" id="projVotesA">0</div>
+              </div>
+              <div class="projection-vs">VS</div>
+              <div class="projection-card" id="projCardB">
+                <div class="projection-photo" id="projPhotoB">B</div>
+                <div class="projection-name" id="projNameB">-</div>
+                <div class="projection-subcopy" id="projSubcopyB">Concursante</div>
+                <div class="projection-count" id="projVotesB">0</div>
+              </div>
+            </div>
+            <div class="vote-bar-wrapper projection-bar">
+              <div class="vote-bar-a" id="projBarA" style="width:50%"></div>
+              <div class="vote-bar-b" id="projBarB" style="width:50%"></div>
+            </div>
+            <div class="projection-meta">
+              <span id="projectionRoundLabel">Ronda 1 - Enfrentamiento 1</span>
+              <span id="projectionLiveLabel">Conteo en vivo</span>
+            </div>
+          </div>
+
+          <div id="projectionPresentationView" style="display:none;">
+            <div class="projection-ranking" id="projectionRanking"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Winner Overlay -->
+  <div class="winner-overlay drumroll" id="drumrollOverlay">
+    <div class="winner-card drumroll-card">
+      <div class="drumroll-badge">Momento final</div>
+      <div class="drumroll-emoji">🥁</div>
+      <div class="drumroll-title">Redoble de tambores...</div>
+      <div class="drumroll-subtitle">El resultado está listo. Esperando el anuncio final.</div>
+      <div class="drumroll-name" id="drumrollName">-</div>
+      <div class="drumroll-category" id="drumrollCategory">-</div>
+    </div>
+  </div>
+
   <div class="winner-overlay" id="winnerOverlay">
     <div class="winner-card glass-strong">
       <div class="winner-photo-frame" id="winnerPhotoFrame">
@@ -2736,9 +3213,15 @@
     let tieBreakWheelAngle = -Math.PI / 2;
     let tieBreakWheelFrame = null;
     let tieBreakWheelKey = '';
-    const adminParam = new URLSearchParams(window.location.search).get('admin');
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminParam = urlParams.get('admin');
+    const screenParam = urlParams.get('screen');
+    const isProjection = screenParam === 'proyeccion';
     const isAdmin = adminParam === 'votatoon2026';
-    if (isAdmin) {
+    if (isProjection) {
+      showScreen('projectionScreen');
+      document.getElementById('headerSubtitle').textContent = 'Pantalla de proyección';
+    } else if (isAdmin) {
       document.querySelector('[data-role="voter"]').style.display = 'none';
       document.querySelector('[data-role="contestant"]').style.display = 'none';
       document.getElementById('presenterBtn').style.display = '';
@@ -2818,11 +3301,13 @@
       const s = currentState;
       if (!s) return;
 
-      if (myRole === 'voter') updateVoterUI(s);
+      if (isProjection) updateProjectionUI(s);
+      else if (myRole === 'voter') updateVoterUI(s);
       else if (myRole === 'contestant') updateContestantUI(s);
       else if (myRole === 'presenter') updatePresenterUI(s);
 
       updateTieBreakUI(s);
+      updateDrumrollUI(s);
 
       // Winner overlay
       if (s.announcedWinner) {
@@ -2850,6 +3335,20 @@
         document.getElementById('winnerPhotoFrame').classList.remove('active');
         document.getElementById('winnerOverlay').classList.remove('active');
       }
+    }
+
+    function updateDrumrollUI(s) {
+      const overlay = document.getElementById('drumrollOverlay');
+      if (!overlay) return;
+
+      if (myRole === 'presenter' || !s.drumroll?.active || s.announcedWinner) {
+        overlay.classList.remove('active');
+        return;
+      }
+
+      document.getElementById('drumrollName').textContent = s.drumroll.winner?.name || 'Ganador listo';
+      document.getElementById('drumrollCategory').textContent = getCategoryLabel(s.drumroll.category);
+      overlay.classList.add('active');
     }
 
     function updateTieBreakUI(s) {
@@ -3121,8 +3620,155 @@
       return currentState?.categoryModes?.[category] === 'popular';
     }
 
+    function isByeContestant(contestant) {
+      return !!contestant?.id?.startsWith('bye_');
+    }
+
+    function getContestantById(category, contestantId) {
+      return (currentState?.contestants?.[category] || []).find((contestant) => contestant.id === contestantId) || null;
+    }
+
+    function getContestantPhoto(category, contestant) {
+      if (!contestant || isByeContestant(contestant)) return null;
+      if (contestant.photo) return contestant.photo;
+      return getContestantById(category, contestant.id)?.photo || null;
+    }
+
+    function renderProjectionPhoto(elementId, category, contestant, fallbackText = '•') {
+      const container = document.getElementById(elementId);
+      if (!container) return;
+      const isBye = isByeContestant(contestant);
+      const photo = getContestantPhoto(category, contestant);
+      if (photo && !isBye) {
+        container.innerHTML = `<img src="${photo}" alt="${contestant.name}" />`;
+      } else {
+        container.textContent = isBye ? '→' : fallbackText;
+      }
+    }
+
+    function setDuelCardState(prefix, side, contestant, votes, options = {}) {
+      const { clickable = false } = options;
+      const isBye = isByeContestant(contestant);
+      const card = document.getElementById(`${prefix}Cont${side}`);
+      const avatar = document.getElementById(`${prefix}Avatar${side}`);
+      const name = document.getElementById(`${prefix}Name${side}`);
+      const voteCount = document.getElementById(`${prefix}Votes${side}`);
+      const voteLabel = card?.querySelector('.vote-label');
+
+      if (!card || !avatar || !name || !voteCount || !voteLabel) return;
+
+      card.classList.toggle('pass-direct', isBye);
+      if (clickable) {
+        card.style.pointerEvents = isBye ? 'none' : '';
+      }
+
+      avatar.classList.remove('avatar-a', 'avatar-b', 'avatar-bye');
+      avatar.classList.add(isBye ? 'avatar-bye' : `avatar-${side.toLowerCase()}`);
+      avatar.textContent = isBye ? '→' : contestant.name.charAt(0).toUpperCase();
+
+      name.textContent = isBye ? 'Pasa directo' : contestant.name;
+      voteCount.textContent = isBye ? 'AUTO' : votes;
+      voteLabel.textContent = isBye ? 'avance' : 'votos';
+    }
+
     function getCategoryLabel(category) {
       return category === 'vestimenta' ? '👗 Vestimenta' : '🎭 Presentación';
+    }
+
+    function updateProjectionDuelSide(side, contestant, votes, category) {
+      const isBye = isByeContestant(contestant);
+      const card = document.getElementById(`projCard${side}`);
+      const name = document.getElementById(`projName${side}`);
+      const subcopy = document.getElementById(`projSubcopy${side}`);
+      const count = document.getElementById(`projVotes${side}`);
+      card.classList.toggle('pass-direct', isBye);
+      count.classList.toggle('pass-direct', isBye);
+      name.textContent = isBye ? 'Pasa directo' : contestant.name;
+      subcopy.textContent = isBye ? 'Avance automático' : 'Concursante';
+      count.textContent = isBye ? 'AUTO' : votes;
+      renderProjectionPhoto(`projPhoto${side}`, category, contestant, contestant?.name?.charAt(0)?.toUpperCase() || side);
+    }
+
+    function renderProjectionLeaderboard(category, leaderboard) {
+      const container = document.getElementById('projectionRanking');
+      if (!container) return;
+
+      container.innerHTML = leaderboard.map((contestant, index) => {
+        const photo = getContestantPhoto(category, contestant);
+        return `
+          <div class="projection-ranking-item ${index === 0 && contestant.votes > 0 ? 'leading' : ''}">
+            <div class="projection-rank">${index + 1}</div>
+            <div class="projection-ranking-photo">${photo ? `<img src="${photo}" alt="${contestant.name}" />` : contestant.name.charAt(0).toUpperCase()}</div>
+            <div class="projection-ranking-name">${contestant.name}</div>
+            <div class="projection-ranking-votes">${contestant.votes}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateProjectionUI(s) {
+      const category = s.currentCategory;
+      const popular = isPopularCategory(category);
+      const match = s.currentMatchData;
+      const waiting = document.getElementById('projectionWaiting');
+      const live = document.getElementById('projectionLive');
+      const duel = document.getElementById('projectionDuelView');
+      const presentation = document.getElementById('projectionPresentationView');
+
+      document.getElementById('projectionCategory').textContent = getCategoryLabel(category);
+      document.getElementById('projectionTitle').textContent = popular ? 'Ranking proyectado' : 'Duelo proyectado';
+
+      if (popular) {
+        if (!s.categoryLeaderboard.length) {
+          waiting.style.display = '';
+          live.style.display = 'none';
+          waiting.classList.add('waiting');
+          document.getElementById('projectionStatusText').textContent = 'Esperando concursantes';
+          document.getElementById('projectionWaitingText').textContent = 'Aún no hay concursantes en Presentación.';
+          document.querySelector('#projectionStatus .status-dot').className = 'status-dot yellow';
+          return;
+        }
+
+        waiting.style.display = 'none';
+        live.style.display = '';
+        duel.style.display = 'none';
+        presentation.style.display = '';
+        document.getElementById('projectionSubtitle').textContent = s.votingOpen ? 'Los votos se actualizan en tiempo real' : 'Último ranking disponible';
+        document.getElementById('projectionStatusText').textContent = s.votingOpen ? 'Votación abierta' : (s.categoryCompleted[category] ? 'Votación finalizada' : 'Esperando votación');
+        document.querySelector('#projectionStatus .status-dot').className = s.votingOpen ? 'status-dot green' : 'status-dot yellow';
+        renderProjectionLeaderboard(category, s.categoryLeaderboard);
+        return;
+      }
+
+      if (!match) {
+        waiting.style.display = '';
+        live.style.display = 'none';
+        waiting.classList.add('waiting');
+        document.getElementById('projectionStatusText').textContent = s.categoryWinner ? 'Categoría finalizada' : 'Esperando el siguiente duelo';
+        document.getElementById('projectionWaitingText').textContent = s.categoryWinner
+          ? `${s.categoryWinner.name} ya ganó ${getCategoryLabel(category)}.`
+          : 'Cuando se abra la votación, aquí se proyectará el enfrentamiento actual.';
+        document.querySelector('#projectionStatus .status-dot').className = s.categoryWinner ? 'status-dot green' : 'status-dot yellow';
+        return;
+      }
+
+      waiting.style.display = 'none';
+      live.style.display = '';
+      duel.style.display = '';
+      presentation.style.display = 'none';
+      document.getElementById('projectionSubtitle').textContent = s.votingOpen ? 'Fotos, nombres y votos en vivo' : 'Resultado o espera del próximo enfrentamiento';
+      document.getElementById('projectionStatusText').textContent = s.votingOpen ? 'Votación abierta' : 'Votación cerrada';
+      document.querySelector('#projectionStatus .status-dot').className = s.votingOpen ? 'status-dot green' : 'status-dot yellow';
+
+      const roundIdx = s.currentRound[category];
+      const matchIdx = s.currentMatch[category];
+      const votesA = match.votes[match.a.id] || 0;
+      const votesB = match.votes[match.b.id] || 0;
+      updateProjectionDuelSide('A', match.a, votesA, category);
+      updateProjectionDuelSide('B', match.b, votesB, category);
+      updateVoteBar('proj', votesA, votesB);
+      document.getElementById('projectionRoundLabel').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1}`;
+      document.getElementById('projectionLiveLabel').textContent = s.votingOpen ? 'Conteo en vivo' : 'Esperando siguiente apertura';
     }
 
     function renderPopularList(containerId, leaderboard, options = {}) {
@@ -3196,15 +3842,10 @@
           const matchIdx = s.currentMatch[category];
           document.getElementById('vMatchTitle').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1}`;
 
-          document.getElementById('vNameA').textContent = match.a.name;
-          document.getElementById('vNameB').textContent = match.b.name;
-          document.getElementById('vAvatarA').textContent = match.a.name.charAt(0).toUpperCase();
-          document.getElementById('vAvatarB').textContent = match.b.name.charAt(0).toUpperCase();
-
           const votesA = match.votes[match.a.id] || 0;
           const votesB = match.votes[match.b.id] || 0;
-          document.getElementById('vVotesA').textContent = votesA;
-          document.getElementById('vVotesB').textContent = votesB;
+          setDuelCardState('v', 'A', match.a, votesA, { clickable: true });
+          setDuelCardState('v', 'B', match.b, votesB, { clickable: true });
 
           updateVoteBar('v', votesA, votesB);
 
@@ -3250,15 +3891,10 @@
           const matchIdx = s.currentMatch[category];
           document.getElementById('cMatchTitle').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1} (${category})`;
 
-          document.getElementById('cNameA').textContent = match.a.name;
-          document.getElementById('cNameB').textContent = match.b.name;
-          document.getElementById('cAvatarA').textContent = match.a.name.charAt(0).toUpperCase();
-          document.getElementById('cAvatarB').textContent = match.b.name.charAt(0).toUpperCase();
-
           const votesA = match.votes[match.a.id] || 0;
           const votesB = match.votes[match.b.id] || 0;
-          document.getElementById('cVotesA').textContent = votesA;
-          document.getElementById('cVotesB').textContent = votesB;
+          setDuelCardState('c', 'A', match.a, votesA);
+          setDuelCardState('c', 'B', match.b, votesB);
 
           updateVoteBar('c', votesA, votesB);
 
@@ -3295,6 +3931,11 @@
       const voteBtn = document.getElementById('btnToggleVote');
       const tieBreakBtn = document.getElementById('btnTieBreak');
       const match = s.currentMatchData;
+      if (s.drumroll?.active) {
+        voteBtn.disabled = true;
+        voteBtn.textContent = 'Esperando anuncio final';
+        voteBtn.className = 'btn btn-warning';
+      }
       if (s.tieBreak?.active) {
         voteBtn.disabled = true;
         voteBtn.textContent = 'Empate pendiente';
@@ -3335,7 +3976,7 @@
       // Check if there's a category winner
       if (s.categoryWinner) {
         voteBtn.disabled = true;
-        voteBtn.textContent = 'Categoría finalizada';
+        voteBtn.textContent = s.drumroll?.active ? 'Esperando anuncio final' : 'Categoría finalizada';
       }
 
       if (tieBreakBtn) {
@@ -3362,15 +4003,10 @@
         const matchIdx = s.currentMatch[s.currentCategory];
         document.getElementById('pMatchTitle').textContent = `Ronda ${roundIdx + 1} - Enfrentamiento ${matchIdx + 1}`;
 
-        document.getElementById('pNameA').textContent = match.a.name;
-        document.getElementById('pNameB').textContent = match.b.name;
-        document.getElementById('pAvatarA').textContent = match.a.name.charAt(0).toUpperCase();
-        document.getElementById('pAvatarB').textContent = match.b.name.charAt(0).toUpperCase();
-
         const votesA = match.votes[match.a.id] || 0;
         const votesB = match.votes[match.b.id] || 0;
-        document.getElementById('pVotesA').textContent = votesA;
-        document.getElementById('pVotesB').textContent = votesB;
+        setDuelCardState('p', 'A', match.a, votesA);
+        setDuelCardState('p', 'B', match.b, votesB);
         updateVoteBar('p', votesA, votesB);
       } else {
         document.getElementById('presenterMatch').style.display = 'none';
@@ -3443,13 +4079,23 @@
 
           html += `<div class="bracket-match ${isCurrentMatch ? 'current' : ''}">`;
 
-          if (!match.a.id.startsWith('bye_')) {
+          if (isByeContestant(match.a) || isByeContestant(match.b)) {
+            const realContestant = isByeContestant(match.a) ? match.b : match.a;
+            const realVotes = isByeContestant(match.a) ? votesB : votesA;
+            const realWon = match.winner === realContestant.id;
+            html += `<div class="bracket-player ${realWon ? 'winner' : ''}">
+              <span class="bp-name">${realContestant.name}</span>
+              <span class="bp-votes">${realVotes}</span>
+            </div>`;
+            html += `<div class="bracket-player pass-direct">
+              <span class="bp-name">Pasa directo</span>
+              <span class="bp-votes">AUTO</span>
+            </div>`;
+          } else {
             html += `<div class="bracket-player ${aWon ? 'winner' : ''} ${bWon && match.winner ? 'loser' : ''}">
               <span class="bp-name">${match.a.name}</span>
               <span class="bp-votes">${votesA}</span>
             </div>`;
-          }
-          if (!match.b.id.startsWith('bye_')) {
             html += `<div class="bracket-player ${bWon ? 'winner' : ''} ${aWon && match.winner ? 'loser' : ''}">
               <span class="bp-name">${match.b.name}</span>
               <span class="bp-votes">${votesB}</span>
@@ -3506,7 +4152,7 @@
     socket.on('matchResult', (data) => {
       hasVoted = false;
       selectedContestantId = null;
-      if (myRole !== 'presenter') {
+      if (myRole !== 'presenter' && !currentState?.drumroll?.active && !currentState?.announcedWinner) {
         showToast(`Ganador: ${data.winner.name}`, 'success');
       }
     });

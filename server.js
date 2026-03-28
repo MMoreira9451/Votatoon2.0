@@ -34,6 +34,9 @@ const state = {
   // Tie-break roulette
   tieBreak: null,
 
+  // Final suspense before announcing a winner
+  drumroll: null,
+
   // Who voted in the current match: Set of socket ids
   voted: new Set(),
 
@@ -47,6 +50,9 @@ const state = {
   users: {}, // socketId -> { role, name, category? }
 };
 
+let tieBreakTimeout = null;
+let drumrollTimeout = null;
+
 // ─── Helpers ─────────────────────────────────────────────────────────
 function findContestantById(category, contestantId) {
   return state.contestants[category]?.find((contestant) => contestant.id === contestantId) || null;
@@ -59,21 +65,37 @@ function buildBracket(category) {
   // Shuffle
   const shuffled = [...list].sort(() => Math.random() - 0.5);
 
-  // Pad to power of 2
+  // Pad to power of 2, but never create a BYE vs BYE match in round 1.
   let size = 1;
   while (size < shuffled.length) size *= 2;
-  while (shuffled.length < size) shuffled.push({ name: "BYE", id: "bye_" + Math.random() });
+  const pairCount = size / 2;
+  const byeCount = size - shuffled.length;
+  const fullPairCount = pairCount - byeCount;
 
-  // Build first round
+  // Build first round with all real vs real matches first, then distribute BYEs
+  // so each bye advances a single contestant instead of producing BYE vs BYE.
   const round = [];
-  for (let i = 0; i < shuffled.length; i += 2) {
+  let contestantIndex = 0;
+
+  for (let i = 0; i < fullPairCount; i++) {
     round.push({
-      a: shuffled[i],
-      b: shuffled[i + 1],
+      a: shuffled[contestantIndex++],
+      b: shuffled[contestantIndex++],
       votes: {},
       winner: null,
     });
   }
+
+  for (let i = 0; i < byeCount; i++) {
+    round.push({
+      a: shuffled[contestantIndex++],
+      b: { name: "BYE", id: "bye_" + Math.random() },
+      votes: {},
+      winner: null,
+    });
+  }
+
+  round.sort(() => Math.random() - 0.5);
   state.brackets[category] = [round];
   state.currentRound[category] = 0;
   state.currentMatch[category] = 0;
@@ -206,6 +228,55 @@ function getCategoryWinner(category) {
   return null;
 }
 
+function isFinalTournamentMatch(category) {
+  if (state.categoryModes[category] !== "tournament") return false;
+  const bracket = state.brackets[category];
+  const roundIdx = state.currentRound[category];
+  const round = bracket?.[roundIdx];
+  return !!round && round.length === 1;
+}
+
+function clearDrumroll() {
+  state.drumroll = null;
+  if (drumrollTimeout) {
+    clearTimeout(drumrollTimeout);
+    drumrollTimeout = null;
+  }
+}
+
+function startDrumroll(category, winner) {
+  if (!winner) return;
+  clearDrumroll();
+  state.drumroll = {
+    active: true,
+    category,
+    winner: {
+      id: winner.id,
+      name: winner.name,
+      category,
+      photo: winner.photo || null,
+    },
+  };
+
+  drumrollTimeout = setTimeout(() => {
+    announceWinnerByContestant(winner, category);
+    io.emit("state", getFullState());
+    io.emit("winnerAnnounced", state.announcedWinner);
+    drumrollTimeout = null;
+  }, 4000);
+}
+
+function announceWinnerByContestant(contestant, category) {
+  if (!contestant) return;
+  clearDrumroll();
+  state.announcedWinner = {
+    id: contestant.id,
+    name: contestant.name,
+    category,
+    photo: contestant.photo || null,
+  };
+}
+
 function getFullState() {
   return {
     categories: state.categories,
@@ -221,6 +292,7 @@ function getFullState() {
     categoryResolvedWinner: state.categoryResolvedWinner,
     categoryLeaderboard: getCategoryLeaderboard(state.currentCategory),
     tieBreak: state.tieBreak,
+    drumroll: state.drumroll,
     registrationOpen: state.registrationOpen,
     announcedWinner: state.announcedWinner,
     currentMatchData: getCurrentMatch(state.currentCategory),
@@ -240,6 +312,10 @@ function createTieBreak(category, candidates, context) {
 
 function clearTieBreak() {
   state.tieBreak = null;
+  if (tieBreakTimeout) {
+    clearTimeout(tieBreakTimeout);
+    tieBreakTimeout = null;
+  }
 }
 
 function resolveTournamentTieBreak(winnerId) {
@@ -351,6 +427,8 @@ io.on("connection", (socket) => {
     state.categoryCompleted.presentacion = false;
     state.categoryResolvedWinner.presentacion = null;
     clearTieBreak();
+    clearDrumroll();
+    state.announcedWinner = null;
     state.categoryVotes.presentacion = Object.fromEntries(
       state.contestants.presentacion.map((contestant) => [contestant.id, 0])
     );
@@ -367,7 +445,7 @@ io.on("connection", (socket) => {
   socket.on("openVoting", () => {
     if (state.users[socket.id]?.role !== "presenter") return;
     const category = state.currentCategory;
-    if (state.tieBreak?.active) return;
+    if (state.tieBreak?.active || state.drumroll?.active) return;
 
     if (state.categoryModes[category] === "popular") {
       if (state.categoryCompleted[category]) return;
@@ -388,7 +466,7 @@ io.on("connection", (socket) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     state.votingOpen = false;
     const category = state.currentCategory;
-    if (state.tieBreak?.active) return;
+    if (state.tieBreak?.active || state.drumroll?.active) return;
 
     if (state.categoryModes[category] === "popular") {
       state.voted = new Set();
@@ -398,7 +476,7 @@ io.on("connection", (socket) => {
         const candidates = leaderboard
           .filter((contestant) => contestant.votes === topVotes)
           .map((contestant) => ({ id: contestant.id, name: contestant.name }));
-        createTieBreak(category, candidates, { type: "popular" });
+        createTieBreak(category, candidates, { type: "popular", final: true });
         io.emit("state", getFullState());
         io.emit("tieBreakReady", { category, candidates });
         return;
@@ -407,6 +485,9 @@ io.on("connection", (socket) => {
       state.categoryCompleted[category] = true;
       state.categoryResolvedWinner[category] = leaderboard[0]?.id || null;
       const winner = getCategoryWinner(category);
+      if (winner) {
+        startDrumroll(category, winner);
+      }
       io.emit("state", getFullState());
       if (winner) {
         io.emit("matchResult", {
@@ -420,6 +501,7 @@ io.on("connection", (socket) => {
 
     const match = getCurrentMatch(category);
     if (!match) return;
+    const wasFinalMatch = isFinalTournamentMatch(category);
 
     const aVotes = match.votes[match.a.id] || 0;
     const bVotes = match.votes[match.b.id] || 0;
@@ -429,7 +511,7 @@ io.on("connection", (socket) => {
       createTieBreak(category, [
         { id: match.a.id, name: match.a.name },
         { id: match.b.id, name: match.b.name },
-      ], { type: "match" });
+      ], { type: "match", final: wasFinalMatch });
       io.emit("state", getFullState());
       io.emit("tieBreakReady", { category, candidates: state.tieBreak.candidates });
       return;
@@ -444,12 +526,19 @@ io.on("connection", (socket) => {
     if (state.currentMatch[state.currentCategory] >= round.length) {
       // All matches in round done, build next round
       buildNextRound(state.currentCategory);
+    } else {
+      // Skip any auto-resolved BYE matches that may follow in the same round.
+      advancePastByes(state.currentCategory);
     }
 
     state.voted = new Set();
+    const winner = match.winner === match.a.id ? match.a : match.b;
+    if (wasFinalMatch) {
+      startDrumroll(category, winner);
+    }
     io.emit("state", getFullState());
     io.emit("matchResult", {
-      winner: match.winner === match.a.id ? match.a : match.b,
+      winner,
       match,
     });
   });
@@ -458,7 +547,7 @@ io.on("connection", (socket) => {
   socket.on("switchCategory", (category) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     if (state.categories.includes(category)) {
-      if (state.tieBreak?.active) return;
+      if (state.tieBreak?.active || state.drumroll?.active) return;
       state.votingOpen = false;
       state.currentCategory = category;
       state.voted = new Set();
@@ -470,6 +559,7 @@ io.on("connection", (socket) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     if (!state.tieBreak?.active || state.tieBreak.spinning) return;
 
+    const isFinalTieBreak = !!state.tieBreak?.context?.final;
     const winnerCandidate = state.tieBreak.candidates[Math.floor(Math.random() * state.tieBreak.candidates.length)];
     state.tieBreak.spinning = true;
     const duration = 4500;
@@ -481,7 +571,7 @@ io.on("connection", (socket) => {
       duration,
     });
 
-    setTimeout(() => {
+    tieBreakTimeout = setTimeout(() => {
       let result = null;
       if (state.tieBreak?.context?.type === "popular") {
         result = resolvePopularTieBreak(winnerCandidate.id);
@@ -490,10 +580,20 @@ io.on("connection", (socket) => {
       }
 
       state.voted = new Set();
-      io.emit("state", getFullState());
       if (result?.winner) {
+        if (isFinalTieBreak) {
+          announceWinnerByContestant(result.winner, result.category);
+        }
+
+        io.emit("state", getFullState());
         io.emit("matchResult", result);
+        if (isFinalTieBreak) {
+          io.emit("winnerAnnounced", state.announcedWinner);
+        }
+      } else {
+        io.emit("state", getFullState());
       }
+      tieBreakTimeout = null;
     }, duration);
   });
 
@@ -502,12 +602,7 @@ io.on("connection", (socket) => {
     if (state.users[socket.id]?.role !== "presenter") return;
     const contestant = findContestantById(category, contestantId);
     if (!contestant) return;
-    state.announcedWinner = {
-      id: contestant.id,
-      name: contestant.name,
-      category,
-      photo: contestant.photo || null,
-    };
+    announceWinnerByContestant(contestant, category);
     io.emit("state", getFullState());
     io.emit("winnerAnnounced", state.announcedWinner);
   });
@@ -516,6 +611,7 @@ io.on("connection", (socket) => {
   socket.on("clearWinner", () => {
     if (state.users[socket.id]?.role !== "presenter") return;
     state.announcedWinner = null;
+    clearDrumroll();
     io.emit("state", getFullState());
   });
 
@@ -572,6 +668,8 @@ io.on("connection", (socket) => {
   // Presenter: reset everything
   socket.on("resetAll", () => {
     if (state.users[socket.id]?.role !== "presenter") return;
+    clearTieBreak();
+    clearDrumroll();
     state.contestants = { vestimenta: [], presentacion: [] };
     state.brackets = { vestimenta: [], presentacion: [] };
     state.currentRound = { vestimenta: 0, presentacion: 0 };
@@ -584,7 +682,7 @@ io.on("connection", (socket) => {
     state.registrationOpen = true;
     state.announcedWinner = null;
     state.currentCategory = "vestimenta";
-    clearTieBreak();
+    state.users = {};
     io.emit("state", getFullState());
     io.emit("resetTriggered");
   });
