@@ -37,8 +37,8 @@ App de votaciones en vivo estilo torneo para eventos con dos categorías: **Vest
 
 | Quién | URL |
 |-------|-----|
-| Votantes y concursantes | `http://tu-dominio:3000` |
-| Presentador (tú) | `http://tu-dominio:3000/?admin=votatoon2026` |
+| Votantes y concursantes | `http://tu-dominio:8020` |
+| Presentador (tú) | `http://tu-dominio:8020/?admin=votatoon2026` |
 
 > **Importante**: Solo con el parámetro `?admin=votatoon2026` aparece la opción de Presentador. Sin esa clave, nadie puede acceder al panel de control.
 
@@ -51,13 +51,13 @@ npm install
 npm start
 ```
 
-La app corre en `http://localhost:3000`.
+La app corre en `http://localhost:3013`.
 
 ### Opción 2: Docker
 
 ```bash
 docker build -t votatoon .
-docker run -d -p 3000:3000 --name votatoon --restart unless-stopped votatoon
+docker run -d -p 8020:3013 --name votatoon --restart unless-stopped votatoon
 ```
 
 ### Opción 3: Docker Compose
@@ -80,7 +80,7 @@ docker-compose up -d
    ```bash
    docker-compose up -d
    ```
-5. La app estará en `http://IP-DE-TU-TRUENAS:3000`
+5. La app estará en `http://IP-DE-TU-TRUENAS:8020`
 
 ### Método 2: Custom App en TrueNAS SCALE
 
@@ -88,13 +88,13 @@ docker-compose up -d
 2. Configura:
    - **Application Name**: `votatoon`
    - **Image Repository**: Primero haz `docker build -t votatoon .` en TrueNAS, o sube la imagen
-   - **Container Port**: `3000`
-   - **Node Port**: `3000` (o el que quieras)
+   - **Container Port**: `3013`
+   - **Node Port**: `8020`
 3. Guarda y despliega
 
 ### Configurar subdominio
 
-En tu reverse proxy (nginx, Traefik, etc.) apunta tu subdominio al puerto 3000 de TrueNAS. Ejemplo con nginx:
+En tu reverse proxy (nginx, Traefik, etc.) apunta tu subdominio al puerto 8020 de TrueNAS. Ejemplo con nginx:
 
 ```nginx
 server {
@@ -102,7 +102,7 @@ server {
     server_name votatoon.tudominio.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:8020;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
